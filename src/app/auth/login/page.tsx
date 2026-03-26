@@ -60,8 +60,8 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-bg max-w-lg mx-auto">
-      <div className="flex items-center px-4 pt-12 pb-4">
+    <div className="flex flex-col min-h-lvh bg-bg max-w-lg mx-auto">
+      <div className="flex items-center px-4 pt-[calc(env(safe-area-inset-top,0px)+2.5rem)] pb-4">
         <button
           type="button"
           onClick={() => router.back()}
@@ -214,7 +214,7 @@ function LoginForm() {
         </div>
       </div>
 
-      <div className="px-6 pb-12">
+      <div className="px-6 pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
         <p className="text-xs text-muted text-center">
           Продолжая, вы соглашаетесь с условиями использования
         </p>

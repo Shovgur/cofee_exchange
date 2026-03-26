@@ -15,7 +15,7 @@ export default function CountrySelectPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-bg max-w-lg mx-auto px-6">
+    <div className="flex flex-col min-h-lvh bg-bg max-w-lg mx-auto px-6 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
       <div className="flex-1 flex flex-col justify-center">
         <div className="w-16 h-16 rounded-2xl bg-orange/20 flex items-center justify-center mb-6">
           <Globe size={28} className="text-orange" />

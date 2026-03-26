@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-dvh bg-bg">
+    <div className="min-h-lvh bg-bg">
       {/* Desktop sidebar (hidden on mobile) */}
       <DesktopSidebar />
 
@@ -15,8 +15,8 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         {/* Desktop: inner page wrapper */}
         <div className="lg:max-w-none">
           {/* Mobile wrapper: max-w, centered */}
-          <div className="max-w-lg mx-auto lg:max-w-none lg:mx-0 relative flex flex-col min-h-dvh lg:min-h-screen lg:h-auto">
-            <main className="flex-1 min-h-0 overflow-y-auto scrollable bg-bg pb-nav-safe lg:pb-0 lg:overflow-visible">
+          <div className="max-w-lg mx-auto lg:max-w-none lg:mx-0 relative flex flex-col min-h-lvh lg:min-h-screen lg:h-auto">
+            <main className="flex flex-1 min-h-0 flex-col overflow-y-auto scrollable bg-bg pt-[env(safe-area-inset-top,0px)] pb-nav-safe lg:overflow-visible lg:pb-0 lg:pt-0">
               {children}
             </main>
             {/* Mobile bottom nav (hidden on desktop) */}

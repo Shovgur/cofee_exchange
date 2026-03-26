@@ -5,17 +5,17 @@
 @layer base {
   html {
     height: 100%;
-    /* iOS PWA / Safari: один min-height без конфликта dvh/svh */
+    /* iOS PWA: lvh заполняет экран лучше dvh при скрытом UI; fill-available — запас */
     min-height: 100%;
     min-height: -webkit-fill-available;
-    min-height: 100dvh;
+    min-height: 100lvh;
     background-color: #0e0e0e;
   }
 
   body {
     min-height: 100%;
     min-height: -webkit-fill-available;
-    min-height: 100dvh;
+    min-height: 100lvh;
     overscroll-behavior: none;
   }
 

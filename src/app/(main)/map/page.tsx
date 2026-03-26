@@ -98,7 +98,7 @@ export default function MapPage() {
 
   return (
     /* Desktop: flex row (list | map). Mobile: only map with bottom sheet */
-    <div className="flex min-h-0 h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom,0px))] lg:h-[100vh] overflow-hidden">
+    <div className="flex min-h-0 flex-1 overflow-hidden lg:h-[100vh] lg:min-h-0">
 
       {/* ── Desktop left panel: shop list ─────────────────── */}
       <aside className="hidden lg:flex flex-col w-80 xl:w-96 bg-bg border-r border-border flex-shrink-0 h-full">
@@ -206,7 +206,7 @@ export default function MapPage() {
         {/* Mobile: bottom sheet */}
         {selected && (
           <div className="lg:hidden absolute bottom-0 left-0 right-0 z-20">
-            <div className="bg-surface rounded-t-3xl p-5 pb-8 shadow-2xl border-t border-border">
+            <div className="bg-surface rounded-t-3xl p-5 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] shadow-2xl border-t border-border">
               {selected.photoUrl && (
                 <div className="relative h-32 rounded-2xl overflow-hidden mb-4 bg-surface-el">
                   <Image src={selected.photoUrl} alt={selected.name} fill className="object-cover" unoptimized sizes="512px" />

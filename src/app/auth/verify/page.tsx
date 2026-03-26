@@ -93,7 +93,7 @@ function VerifyForm() {
 
   if (success) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[100dvh] gap-5 bg-bg max-w-lg mx-auto px-6">
+      <div className="flex flex-col items-center justify-center min-h-lvh gap-5 bg-bg max-w-lg mx-auto px-6 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]">
         <div className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center">
           <CheckCircle size={40} className="text-success" />
         </div>
@@ -106,8 +106,8 @@ function VerifyForm() {
   }
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-bg max-w-lg mx-auto">
-      <div className="flex items-center px-4 pt-12 pb-4">
+    <div className="flex flex-col min-h-lvh bg-bg max-w-lg mx-auto pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+      <div className="flex items-center px-4 pt-[calc(env(safe-area-inset-top,0px)+2.5rem)] pb-4">
         <button
           onClick={() => router.back()}
           className="p-2 -ml-2 rounded-xl hover:bg-surface-el transition-colors"
