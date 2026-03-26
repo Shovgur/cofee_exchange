@@ -30,13 +30,11 @@ export default function BottomNav() {
   return (
     <nav
       className={cn(
-        'fixed bottom-0 left-0 right-0 z-[10050] lg:hidden',
+        'fixed inset-x-0 bottom-0 z-[10050] lg:hidden flex flex-col',
         'border-t border-border bg-surface backdrop-blur-md',
-        /* отступ под индикатор «домой» iPhone — один раз, без второго блока снизу */
-        'pb-[env(safe-area-inset-bottom,0px)]',
       )}
     >
-      <div className="flex items-stretch max-w-lg mx-auto">
+      <div className="flex items-stretch max-w-lg mx-auto w-full">
         {items.map(({ href, icon: Icon, label }) => {
           const isActive =
             href === '/feed'
@@ -66,6 +64,11 @@ export default function BottomNav() {
           );
         })}
       </div>
+      {/* Отдельный блок под safe-area: фон как у панели, без «зазора» под навбаром */}
+      <div
+        className="h-safe-area-bottom w-full shrink-0 bg-surface"
+        aria-hidden
+      />
     </nav>
   );
 }

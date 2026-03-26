@@ -5,15 +5,17 @@
 @layer base {
   html {
     height: 100%;
-    /* iOS PWA / Safari: заполняем экран без «чёрной полосы» снизу */
+    /* iOS PWA / Safari: один min-height без конфликта dvh/svh */
     min-height: 100%;
     min-height: -webkit-fill-available;
+    min-height: 100dvh;
     background-color: #0e0e0e;
   }
 
   body {
     min-height: 100%;
     min-height: -webkit-fill-available;
+    min-height: 100dvh;
     overscroll-behavior: none;
   }
 
@@ -49,6 +51,12 @@
   /* нижний отступ под «домашнюю» полоску iPhone — только padding, не отдельный блок */
   .pb-nav-safe {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Высота home indicator: constant() для старых Safari, env() для новых */
+  .h-safe-area-bottom {
+    height: constant(safe-area-inset-bottom);
+    height: env(safe-area-inset-bottom, 0px);
   }
 
   .scrollable {
