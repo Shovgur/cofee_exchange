@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
+  body {
+    @apply bg-bg text-white;
+    font-family: var(--font-inter), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+}
+
+@layer utilities {
+  .safe-pb {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+
+  .h-safe-bottom {
+    height: env(safe-area-inset-bottom, 0px);
+  }
+
+  .scrollable {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Leaflet panes use high z-index; keep map under fixed app chrome (nav uses z-[10050]) */
+.leaflet-container {
+  z-index: 1 !important;
+}
+
+/* Не показывать иконки/favicon в строке атрибуции карты */
+.leaflet-control-attribution img,
+.leaflet-control-attribution a img {
+  display: none !important;
+}
