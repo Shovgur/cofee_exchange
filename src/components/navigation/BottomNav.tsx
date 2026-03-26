@@ -28,7 +28,14 @@ export default function BottomNav() {
   const items = user ? NAV_ITEMS_AUTH : NAV_ITEMS_GUEST;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[10050] bg-surface/95 backdrop-blur-md border-t border-border lg:hidden">
+    <nav
+      className={cn(
+        'fixed bottom-0 left-0 right-0 z-[10050] lg:hidden',
+        'border-t border-border bg-surface backdrop-blur-md',
+        /* отступ под индикатор «домой» iPhone — один раз, без второго блока снизу */
+        'pb-[env(safe-area-inset-bottom,0px)]',
+      )}
+    >
       <div className="flex items-stretch max-w-lg mx-auto">
         {items.map(({ href, icon: Icon, label }) => {
           const isActive =
@@ -59,8 +66,6 @@ export default function BottomNav() {
           );
         })}
       </div>
-      {/* safe area for iPhone */}
-      <div className="h-safe-bottom bg-surface/95" />
     </nav>
   );
 }

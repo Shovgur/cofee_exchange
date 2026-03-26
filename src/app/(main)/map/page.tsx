@@ -98,7 +98,7 @@ export default function MapPage() {
 
   return (
     /* Desktop: flex row (list | map). Mobile: only map with bottom sheet */
-    <div className="flex min-h-0 h-[calc(100dvh-5.5rem)] lg:h-[100vh] overflow-hidden">
+    <div className="flex min-h-0 h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom,0px))] lg:h-[100vh] overflow-hidden">
 
       {/* ── Desktop left panel: shop list ─────────────────── */}
       <aside className="hidden lg:flex flex-col w-80 xl:w-96 bg-bg border-r border-border flex-shrink-0 h-full">

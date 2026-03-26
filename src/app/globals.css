@@ -3,9 +3,17 @@
 @tailwind utilities;
 
 @layer base {
-  html,
-  body {
+  html {
     height: 100%;
+    /* iOS PWA / Safari: заполняем экран без «чёрной полосы» снизу */
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+    background-color: #0e0e0e;
+  }
+
+  body {
+    min-height: 100%;
+    min-height: -webkit-fill-available;
     overscroll-behavior: none;
   }
 
@@ -38,8 +46,9 @@
     padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
   }
 
-  .h-safe-bottom {
-    height: env(safe-area-inset-bottom, 0px);
+  /* нижний отступ под «домашнюю» полоску iPhone — только padding, не отдельный блок */
+  .pb-nav-safe {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   .scrollable {
