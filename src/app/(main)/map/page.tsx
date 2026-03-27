@@ -98,11 +98,17 @@ export default function MapPage() {
 
   return (
     /* Desktop: flex row (list | map). Mobile: only map with bottom sheet */
-    <div className="flex min-h-0 flex-1 overflow-hidden lg:h-[100vh] lg:min-h-0">
+    <div
+      className={cn(
+        'flex flex-1 shrink-0 flex-col overflow-hidden',
+        'min-h-[calc(100dvh-5rem)] lg:grid lg:h-[100vh] lg:max-h-[100vh] lg:min-h-0 lg:min-w-0',
+        'lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden',
+      )}
+    >
 
       {/* ── Desktop left panel: shop list ─────────────────── */}
-      <aside className="hidden lg:flex flex-col w-80 xl:w-96 bg-bg border-r border-border flex-shrink-0 h-full">
-        <div className="px-5 pt-6 pb-4 border-b border-border">
+      <aside className="hidden min-h-0 min-w-0 flex-col overflow-hidden border-r border-border bg-bg lg:flex lg:flex-col">
+        <div className="shrink-0 px-5 pt-6 pb-4 border-b border-border">
           <h1 className="text-2xl font-bold mb-3">Карта</h1>
           <div className="flex items-center gap-2 bg-surface rounded-xl px-3 py-2.5 border border-border">
             <Search size={15} className="text-muted flex-shrink-0" />
@@ -115,11 +121,11 @@ export default function MapPage() {
             />
           </div>
           <p className="text-xs text-muted mt-2">
-            {country.flag} {country.name} · {filteredShops.length} {filteredShops.length === 1 ? 'кофейня' : 'кофеен'}
+            {country.name} · {filteredShops.length} {filteredShops.length === 1 ? 'кофейня' : 'кофеен'}
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto scrollable px-4 py-3 space-y-2">
+        <div className="sidebar-scroll h-0 min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-2">
           {filteredShops.map((shop) => (
             <ShopCard
               key={shop.id}
@@ -135,7 +141,7 @@ export default function MapPage() {
 
         {/* Selected shop actions */}
         {selected && (
-          <div className="px-4 py-4 border-t border-border bg-surface/50">
+          <div className="shrink-0 px-4 py-4 border-t border-border bg-surface/50">
             <p className="text-sm font-semibold truncate mb-3">{selected.name}</p>
             <Button fullWidth onClick={() => openInNavigator(selected)}>
               <Navigation size={15} />
@@ -145,20 +151,21 @@ export default function MapPage() {
         )}
       </aside>
 
-      {/* ── Map area ──────────────────────────────────────── */}
-      <div className="relative flex-1 h-full">
-        <MapView
-          key={country.id}
-          shops={shops}
-          onShopClick={(shop) => setSelected(shop)}
-          center={center}
-        />
+      {/* ── Map area: absolute fill — иначе Leaflet получает ~высоту контента, а не колонки ─ */}
+      <div className="relative min-h-0 min-w-0 flex-1 lg:min-h-0">
+        <div className="absolute inset-0 z-0 min-h-0">
+          <MapView
+            key={country.id}
+            shops={shops}
+            onShopClick={(shop) => setSelected(shop)}
+            center={center}
+          />
+        </div>
 
-        {/* Mobile: floating country badge */}
-        <div className="lg:hidden absolute top-4 left-4 right-4 z-10 pointer-events-none">
-          <div className="inline-flex items-center bg-bg/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-border">
-            <span className="text-sm font-medium">
-              {country.flag} {country.name} · {shops.length} кофеен
+        <div className="pointer-events-none absolute top-4 left-4 right-4 z-10 lg:hidden">
+          <div className="inline-flex max-w-full items-center rounded-2xl border border-border bg-bg/80 px-4 py-2 backdrop-blur-md">
+            <span className="truncate text-sm font-medium">
+              {country.name} · {shops.length} кофеен
             </span>
           </div>
         </div>

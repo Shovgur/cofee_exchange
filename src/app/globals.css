@@ -64,6 +64,23 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Сайдбар карты: видимый скролл (глобально scrollbar скрыт) */
+  .sidebar-scroll {
+    scrollbar-width: thin !important;
+    scrollbar-color: #52525b transparent;
+  }
+  .sidebar-scroll::-webkit-scrollbar {
+    display: block !important;
+    width: 6px;
+  }
+  .sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: #52525b;
+    border-radius: 9999px;
+  }
+
   .no-select {
     -webkit-user-select: none;
     user-select: none;
@@ -75,8 +92,20 @@
   z-index: 1 !important;
 }
 
-/* Не показывать иконки/favicon в строке атрибуции карты */
-.leaflet-control-attribution img,
-.leaflet-control-attribution a img {
+/* Тёмные элементы управления под Carto Dark / тёмный UI */
+.leaflet-container .leaflet-bar {
+  border-color: #3f3f46 !important;
+}
+.leaflet-container .leaflet-control-zoom a {
+  background-color: #252528 !important;
+  color: #f4f4f5 !important;
+  border-color: #3f3f46 !important;
+}
+.leaflet-container .leaflet-control-zoom a:hover {
+  background-color: #3f3f46 !important;
+}
+
+/* Атрибуция OSM/CARTO/Leaflet скрыта по запросу UI */
+.leaflet-container .leaflet-control-attribution {
   display: none !important;
 }

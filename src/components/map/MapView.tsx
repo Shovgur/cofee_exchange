@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Locate, LocateFixed } from 'lucide-react';
+import type { Map as LeafletMap } from 'leaflet';
 import type { CoffeeShop } from '@/types';
+
+import 'leaflet/dist/leaflet.css';
 
 interface Props {
   shops: CoffeeShop[];
@@ -10,7 +13,9 @@ interface Props {
   center: [number, number];
 }
 
-type LeafletMap = { remove(): void; setView(c: [number, number], z: number): void };
+/* Тёмная подложка на данных OSM (Carto); leaflet.css подключён из npm */
+const CARTO_DARK =
+  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
 export default function MapView({ shops, onShopClick, center }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -24,112 +29,7 @@ export default function MapView({ shops, onShopClick, center }: Props) {
   const [hasLocation, setHasLocation] = useState(false);
   const [locationError, setLocationError] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
-    const el = mapRef.current;
-    if (!el) return;
-
-    import('leaflet').then((L) => {
-      if (cancelled) return;
-
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link');
-        link.id = 'leaflet-css';
-        link.rel = 'stylesheet';
-        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
-        document.head.appendChild(link);
-      }
-
-      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      });
-
-      const container = el as HTMLElement & { _leaflet_id?: number };
-      if (container._leaflet_id) {
-        return;
-      }
-
-      const map = L.map(el, {
-        center,
-        zoom: 12,
-        zoomControl: false,
-        /* Своя атрибуция: без HTML-ссылок (у ссылок браузер может показывать чужие favicon/флаги) */
-        attributionControl: false,
-      }) as unknown as LeafletMap;
-
-      if (cancelled) {
-        map.remove();
-        return;
-      }
-
-      mapInstanceRef.current = map;
-
-      /* Тёмная подложка на данных OSM (Carto); атрибуция только текстом */
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '',
-        maxZoom: 19,
-      }).addTo(map as never);
-
-      L.control
-        .attribution({ prefix: false })
-        .addAttribution('© OpenStreetMap © CARTO')
-        .addTo(map as never);
-
-      const orangeIcon = L.divIcon({
-        className: '',
-        html: `<div style="
-          width:36px;height:36px;border-radius:50% 50% 50% 0;
-          background:#FF6B35;transform:rotate(-45deg);
-          display:flex;align-items:center;justify-content:center;
-          box-shadow:0 2px 10px rgba(255,107,53,0.6);border:2px solid white;
-        "></div>`,
-        iconSize: [36, 36],
-        iconAnchor: [18, 36],
-        popupAnchor: [0, -36],
-      });
-
-      const markers: { remove(): void }[] = [];
-      shops.forEach((shop) => {
-        const marker = L.marker([shop.lat, shop.lng], { icon: orangeIcon }).addTo(map as never);
-        marker.on('click', () => onShopClickRef.current(shop));
-        markers.push(marker as unknown as { remove(): void });
-      });
-      shopMarkersRef.current = markers;
-    });
-
-    return () => {
-      cancelled = true;
-      shopMarkersRef.current.forEach((m) => {
-        try {
-          m.remove();
-        } catch {
-          /* noop */
-        }
-      });
-      shopMarkersRef.current = [];
-      if (userMarkerRef.current) {
-        try {
-          userMarkerRef.current.remove();
-        } catch {
-          /* noop */
-        }
-        userMarkerRef.current = null;
-      }
-      if (mapInstanceRef.current) {
-        try {
-          mapInstanceRef.current.remove();
-        } catch {
-          /* noop */
-        }
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [center, shops]);
-
-  function handleLocate() {
+  const handleLocate = useCallback(() => {
     if (!navigator.geolocation) {
       setLocationError('Геолокация не поддерживается браузером');
       return;
@@ -180,10 +80,11 @@ export default function MapView({ shops, onShopClick, center }: Props) {
           });
 
           const marker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 });
-          marker.addTo(map as never);
+          marker.addTo(map);
           userMarkerRef.current = marker as unknown as { remove(): void };
 
           map.setView([lat, lng], 15);
+          map.invalidateSize({ animate: false });
         });
       },
       (err) => {
@@ -191,39 +92,148 @@ export default function MapView({ shops, onShopClick, center }: Props) {
         if (err.code === 1) setLocationError('Доступ к геолокации запрещён');
         else if (err.code === 2) setLocationError('Местоположение недоступно');
         else setLocationError('Не удалось определить местоположение');
-        setTimeout(() => setLocationError(''), 4000);
+        setTimeout(() => setLocationError(''), 5000);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
     );
-  }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let resizeObserver: ResizeObserver | null = null;
+    const el = mapRef.current;
+    if (!el) return;
+
+    import('leaflet').then((L) => {
+      if (cancelled) return;
+
+      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      });
+
+      const container = el as HTMLElement & { _leaflet_id?: number };
+      if (container._leaflet_id) {
+        return;
+      }
+
+      const map = L.map(el, {
+        center,
+        zoom: 12,
+        zoomControl: true,
+        attributionControl: false,
+      });
+
+      if (cancelled) {
+        map.remove();
+        return;
+      }
+
+      mapInstanceRef.current = map;
+
+      const scheduleInvalidate = () => {
+        map.invalidateSize({ animate: false });
+      };
+      requestAnimationFrame(() => {
+        requestAnimationFrame(scheduleInvalidate);
+      });
+      resizeObserver = new ResizeObserver(scheduleInvalidate);
+      resizeObserver.observe(el);
+
+      L.tileLayer(CARTO_DARK, {
+        subdomains: 'abcd',
+        attribution: '',
+        maxZoom: 19,
+      }).addTo(map);
+
+      const orangeIcon = L.divIcon({
+        className: '',
+        html: `<div style="
+          width:36px;height:36px;border-radius:50% 50% 50% 0;
+          background:#FF6B35;transform:rotate(-45deg);
+          display:flex;align-items:center;justify-content:center;
+          box-shadow:0 2px 10px rgba(255,107,53,0.6);border:2px solid white;
+        "></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+        popupAnchor: [0, -36],
+      });
+
+      const markers: { remove(): void }[] = [];
+      shops.forEach((shop) => {
+        const marker = L.marker([shop.lat, shop.lng], { icon: orangeIcon }).addTo(map);
+        marker.on('click', () => onShopClickRef.current(shop));
+        markers.push(marker as unknown as { remove(): void });
+      });
+      shopMarkersRef.current = markers;
+
+      scheduleInvalidate();
+    });
+
+    return () => {
+      cancelled = true;
+      resizeObserver?.disconnect();
+      shopMarkersRef.current.forEach((m) => {
+        try {
+          m.remove();
+        } catch {
+          /* noop */
+        }
+      });
+      shopMarkersRef.current = [];
+      if (userMarkerRef.current) {
+        try {
+          userMarkerRef.current.remove();
+        } catch {
+          /* noop */
+        }
+        userMarkerRef.current = null;
+      }
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch {
+          /* noop */
+        }
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [center, shops]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={mapRef} className="w-full h-full z-0" style={{ background: '#1a1a2e' }} />
+    <div className="relative h-full min-h-0 w-full">
+      <div
+        ref={mapRef}
+        className="z-0 h-full min-h-0 w-full"
+        style={{ background: '#0d0d12' }}
+      />
 
-      <div className="absolute bottom-20 right-4 lg:bottom-4 z-20 flex flex-col gap-2">
+      <div className="pointer-events-none absolute inset-0 z-[10060] flex items-end justify-end p-4 pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] lg:p-6 lg:pb-6">
         <button
           type="button"
           onClick={handleLocate}
           disabled={locating}
-          title="Моё местоположение"
-          className="w-11 h-11 rounded-2xl bg-surface/95 backdrop-blur-md border border-border flex items-center justify-center shadow-lg hover:bg-surface-el transition-colors disabled:opacity-50"
+          title="Показать моё местоположение"
+          aria-label="Показать моё местоположение на карте"
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-surface/95 shadow-lg backdrop-blur-md transition-colors hover:bg-surface-el disabled:opacity-50"
         >
           {locating ? (
-            <span className="w-5 h-5 border-2 border-white/20 border-t-orange rounded-full animate-spin" />
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-orange" />
           ) : hasLocation ? (
-            <LocateFixed size={18} className="text-orange" />
+            <LocateFixed size={20} className="text-orange" />
           ) : (
-            <Locate size={18} className="text-muted" />
+            <Locate size={20} className="text-orange" />
           )}
         </button>
       </div>
 
-      {locationError && (
-        <div className="absolute bottom-28 lg:bottom-20 left-1/2 -translate-x-1/2 z-30 bg-danger/90 text-white text-xs px-4 py-2 rounded-xl shadow-lg max-w-[90vw] text-center">
+      {locationError ? (
+        <div className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom,0px))] left-1/2 z-[10060] max-w-[90vw] -translate-x-1/2 rounded-xl bg-danger/95 px-4 py-2.5 text-center text-xs text-white shadow-lg lg:bottom-24">
           {locationError}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
