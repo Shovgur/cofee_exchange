@@ -1,4 +1,4 @@
-import type { Drink, DrinkCategory, PriceTrend, PricePoint } from '@/types';
+import type { Drink, DrinkCategory, PriceTrend, PricePoint, VolumePrice } from '@/types';
 
 function seededRand(seed: number) {
   let s = seed;
@@ -30,6 +30,37 @@ function computeTrend(change: number): PriceTrend {
   return 'neutral';
 }
 
+// Multipliers per volume size
+const VOLUME_MULTIPLIERS = [
+  { value: '0.2', label: '0.2 л', multiplier: 0.75 },
+  { value: '0.4', label: '0.4 л', multiplier: 1.0 },
+  { value: '0.6', label: '0.6 л', multiplier: 1.27 },
+];
+
+// Slight change variation per volume
+const VOLUME_CHANGE_DELTA: Record<string, number> = {
+  '0.2': 0.4,
+  '0.4': 0.0,
+  '0.6': -0.3,
+};
+
+function buildVolumes(basePrice: number, baseChange: number, seed: number): VolumePrice[] {
+  return VOLUME_MULTIPLIERS.map(({ value, label, multiplier }, idx) => {
+    const price = Math.round(basePrice * multiplier);
+    const change = Math.round((baseChange + VOLUME_CHANGE_DELTA[value]) * 10) / 10;
+    const history = generatePriceHistory(price, seed + idx * 997);
+    const current = history[history.length - 1].price;
+    return {
+      value,
+      label,
+      price: current,
+      change,
+      trend: computeTrend(change),
+      priceHistory: history,
+    };
+  });
+}
+
 interface DrinkTemplate {
   id: string;
   name: string;
@@ -41,6 +72,7 @@ interface DrinkTemplate {
   proteins: number;
   fats: number;
   carbs: number;
+  photoUrl: string;
 }
 
 const DRINK_TEMPLATES: DrinkTemplate[] = [
@@ -56,6 +88,7 @@ const DRINK_TEMPLATES: DrinkTemplate[] = [
     proteins: 0.3,
     fats: 0.1,
     carbs: 0.8,
+    photoUrl: 'https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?w=400&q=80',
   },
   {
     id: 'americano',
@@ -68,6 +101,7 @@ const DRINK_TEMPLATES: DrinkTemplate[] = [
     proteins: 0.5,
     fats: 0.2,
     carbs: 1.2,
+    photoUrl: 'https://images.unsplash.com/photo-1580933073521-dc49ac0d4e6a?w=400&q=80',
   },
   {
     id: 'cappuccino',
@@ -80,6 +114,7 @@ const DRINK_TEMPLATES: DrinkTemplate[] = [
     proteins: 6.0,
     fats: 4.5,
     carbs: 10.0,
+    photoUrl: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&q=80',
   },
   {
     id: 'latte',
@@ -92,6 +127,7 @@ const DRINK_TEMPLATES: DrinkTemplate[] = [
     proteins: 7.5,
     fats: 5.5,
     carbs: 13.0,
+    photoUrl: 'https://images.unsplash.com/photo-1561047029-3000c68339ca?w=400&q=80',
   },
   {
     id: 'flat-white',
@@ -104,6 +140,7 @@ const DRINK_TEMPLATES: DrinkTemplate[] = [
     proteins: 5.0,
     fats: 3.5,
     carbs: 8.0,
+    photoUrl: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=400&q=80',
   },
   {
     id: 'lemonade-classic',
@@ -116,6 +153,7 @@ const DRINK_TEMPLATES: DrinkTemplate[] = [
     proteins: 0.3,
     fats: 0.1,
     carbs: 20.0,
+    photoUrl: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400&q=80',
   },
   {
     id: 'lemonade-mango',
@@ -128,6 +166,7 @@ const DRINK_TEMPLATES: DrinkTemplate[] = [
     proteins: 0.5,
     fats: 0.2,
     carbs: 26.0,
+    photoUrl: 'https://images.unsplash.com/photo-1554306274-f23873d9a26c?w=400&q=80',
   },
   {
     id: 'lemonade-matcha',
@@ -140,6 +179,7 @@ const DRINK_TEMPLATES: DrinkTemplate[] = [
     proteins: 1.0,
     fats: 0.3,
     carbs: 14.0,
+    photoUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&q=80',
   },
   {
     id: 'tea-black',
@@ -152,6 +192,7 @@ const DRINK_TEMPLATES: DrinkTemplate[] = [
     proteins: 0.1,
     fats: 0.0,
     carbs: 0.5,
+    photoUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
   },
   {
     id: 'tea-green',
@@ -164,6 +205,7 @@ const DRINK_TEMPLATES: DrinkTemplate[] = [
     proteins: 0.1,
     fats: 0.0,
     carbs: 0.4,
+    photoUrl: 'https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?w=400&q=80',
   },
 ];
 
@@ -181,7 +223,7 @@ const RU_PRICES: Record<string, number> = {
   'tea-green': 169,
 };
 
-// Base prices in KZT (approx ×5 from RUB)
+// Base prices in KZT
 const KZ_PRICES: Record<string, number> = {
   espresso: 750,
   americano: 890,
@@ -195,7 +237,7 @@ const KZ_PRICES: Record<string, number> = {
   'tea-green': 840,
 };
 
-// Price changes (% for demo purposes)
+// Price changes (%)
 const PRICE_CHANGES: Record<string, number> = {
   espresso: 3.2,
   americano: -1.8,
@@ -213,7 +255,8 @@ function buildDrink(template: DrinkTemplate, countryId: string): Drink {
   const priceMap = countryId === 'KZ' ? KZ_PRICES : RU_PRICES;
   const base = priceMap[template.id] ?? 199;
   const change = PRICE_CHANGES[template.id] ?? 0;
-  const history = generatePriceHistory(base, base + template.id.charCodeAt(0));
+  const seed = base + template.id.charCodeAt(0);
+  const history = generatePriceHistory(base, seed);
   const prices = history.map((p) => p.price);
   const min = Math.min(...prices);
   const max = Math.max(...prices);
@@ -230,6 +273,7 @@ function buildDrink(template: DrinkTemplate, countryId: string): Drink {
     priceHistory: history,
     countryId,
     available: true,
+    volumes: buildVolumes(base, change, seed),
   };
 }
 

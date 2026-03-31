@@ -9,7 +9,7 @@ import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import { cn, couponStatusLabel, couponStatusColor, formatDateTime, formatFullDate, daysUntil } from '@/lib/utils';
 import type { Coupon, CouponStatus } from '@/types';
-import { Ticket, Calendar, Clock } from 'lucide-react';
+import { Ticket, Calendar, Clock, Rocket } from 'lucide-react';
 
 const FILTERS: { value: 'all' | CouponStatus; label: string }[] = [
   { value: 'all', label: 'Все' },
@@ -91,25 +91,45 @@ export default function CouponsPage() {
             >
               <div className="flex items-start gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-surface-el flex items-center justify-center text-2xl flex-shrink-0">
-                  <DrinkEmoji category={coupon.category} />
+                  {coupon.isPreorder
+                    ? <Rocket size={22} className="text-yellow-400" />
+                    : <DrinkEmoji category={coupon.category} />
+                  }
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="font-semibold text-sm truncate">{coupon.drinkName}</span>
-                    <Badge className={couponStatusColor(coupon.status)}>
-                      {couponStatusLabel(coupon.status)}
-                    </Badge>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {coupon.isPreorder && (
+                        <Badge className="bg-yellow-500/20 text-yellow-400">Предзаказ</Badge>
+                      )}
+                      <Badge className={couponStatusColor(coupon.status)}>
+                        {couponStatusLabel(coupon.status)}
+                      </Badge>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted">
                     <span className="font-medium text-white">
                       {Math.round(coupon.purchasePrice)} {coupon.currencySymbol}
+                      {coupon.volumeLabel && <span className="text-muted font-normal ml-1">· {coupon.volumeLabel}</span>}
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar size={11} />
                       {formatDateTime(coupon.purchasedAt)}
                     </span>
                   </div>
-                  {coupon.status === 'active' && (
+                  {coupon.isPreorder && coupon.saleStartsAt && coupon.status === 'active' && (
+                    <div className="flex items-center gap-1 mt-1.5 text-xs text-yellow-400">
+                      <Rocket size={11} />
+                      <span>
+                        Активируется{' '}
+                        <span className="font-medium">
+                          {new Date(coupon.saleStartsAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                        </span>
+                      </span>
+                    </div>
+                  )}
+                  {!coupon.isPreorder && coupon.status === 'active' && (
                     <div className="flex items-center gap-1 mt-1.5 text-xs text-muted">
                       <Clock size={11} />
                       <span>

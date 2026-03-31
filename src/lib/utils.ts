@@ -79,6 +79,7 @@ export function feedTypeLabel(type: FeedItemType): string {
     promotion: 'Акции',
     event: 'События',
     new_drink: 'Новинка',
+    ipo: 'IPO напитков',
   };
   return map[type] ?? type;
 }
@@ -89,8 +90,39 @@ export function feedTypeColor(type: FeedItemType): string {
     promotion: 'bg-orange/20 text-orange',
     event: 'bg-purple-500/20 text-purple-400',
     new_drink: 'bg-success/20 text-success',
+    ipo: 'bg-yellow-500/20 text-yellow-400',
   };
   return map[type] ?? '';
+}
+
+/** Рассчитывает время до следующего обновления цен.
+ *  intervalMinutes — интервал обновления в минутах (по умолчанию 5). */
+export function getNextPriceUpdateAt(intervalMinutes = 5): number {
+  const now = Date.now();
+  const intervalMs = intervalMinutes * 60 * 1000;
+  return Math.ceil(now / intervalMs) * intervalMs;
+}
+
+/** Форматирует оставшееся время в мм:сс */
+export function formatCountdown(ms: number): string {
+  const totalSecs = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(totalSecs / 60);
+  const s = totalSecs % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/** Форматирует обратный отсчёт до даты как «Xд Yч Zм» или «мм:сс» если < 1 часа */
+export function formatIpoCountdown(isoDate: string): string {
+  const diff = Math.max(0, new Date(isoDate).getTime() - Date.now());
+  const totalSecs = Math.floor(diff / 1000);
+  const days = Math.floor(totalSecs / 86400);
+  const hours = Math.floor((totalSecs % 86400) / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+
+  if (days > 0) return `${days}д ${hours}ч ${mins}м`;
+  if (hours > 0) return `${hours}ч ${mins}м ${secs}с`;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
 export function daysUntil(iso: string): number {

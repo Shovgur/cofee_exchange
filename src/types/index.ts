@@ -15,6 +15,16 @@ export interface PricePoint {
   price: number;
 }
 
+// Volume price (0.2 / 0.4 / 0.6 л)
+export interface VolumePrice {
+  value: string;          // '0.2' | '0.4' | '0.6'
+  label: string;          // '0.2 л'
+  price: number;
+  change: number;         // percent
+  trend: PriceTrend;
+  priceHistory: PricePoint[];
+}
+
 // Menu / Drinks
 export type DrinkCategory = 'coffee' | 'lemonade' | 'tea';
 
@@ -40,15 +50,37 @@ export interface Drink {
   priceHistory: PricePoint[];
   countryId: string;
   available: boolean;
+  photoUrl?: string;
+  volumes: VolumePrice[];
+}
+
+// IPO напитков
+export type IpoStatus = 'upcoming' | 'active' | 'released';
+
+export interface IpoDrink {
+  id: string;
+  name: string;
+  nameShort: string;
+  category: DrinkCategory;
+  description: string;
+  fullDescription: string;
+  photoUrl?: string;
+  preorderPrice: number;
+  countryId: string;
+  status: IpoStatus;
+  saleStartsAt: string;   // ISO date
+  releaseDate?: string;   // ISO date when fully released into menu
+  volumes: { label: string; value: string; preorderPrice: number }[];
 }
 
 // Feed
-export type FeedItemType = 'news' | 'promotion' | 'event' | 'new_drink';
+export type FeedItemType = 'news' | 'promotion' | 'event' | 'new_drink' | 'ipo';
 
 export type FeedLink =
   | { type: 'menu' }
   | { type: 'map' }
-  | { type: 'drink'; drinkId: string };
+  | { type: 'drink'; drinkId: string }
+  | { type: 'ipo'; ipoId: string };
 
 export interface FeedItem {
   id: string;
@@ -96,6 +128,9 @@ export interface Coupon {
   status: CouponStatus;
   qrData: string;
   countryId: string;
+  isPreorder?: boolean;
+  saleStartsAt?: string;
+  volumeLabel?: string;
 }
 
 // User
