@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useId, useMemo, useState } from 'react';
 import {
   AreaChart,
   Area,
@@ -33,32 +34,75 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: { payl
   );
 }
 
+/** Стабильная подпись данных — сброс зума только при смене напитка / объёма, не при каждом тике родителя */
+function dataSignature(data: PricePoint[]): string {
+  if (!data.length) return '';
+  return `${data[0].timestamp}-${data[data.length - 1].timestamp}-${data.length}`;
+}
+
 export default function PriceChart({ data, currencySymbol, basePrice }: Props) {
-  const prices = data.map((d) => d.price);
+  const gradId = useId().replace(/:/g, '');
+  const sig = useMemo(() => dataSignature(data), [data]);
+
+  const chartData = useMemo(
+    () =>
+      data.map((d) => ({
+        ...d,
+        price: Math.round(d.price * 100) / 100,
+      })),
+    [data],
+  );
+
+  const defaultRange = (n: number) => ({
+    start: n <= 0 ? 0 : Math.floor(n * 0.5),
+    end: n <= 0 ? 0 : n - 1,
+  });
+
+  const [brushStart, setBrushStart] = useState(() => defaultRange(data.length).start);
+  const [brushEnd, setBrushEnd] = useState(() => defaultRange(data.length).end);
+
+  useEffect(() => {
+    const n = chartData.length;
+    if (n === 0) return;
+    const { start, end } = defaultRange(n);
+    setBrushStart(start);
+    setBrushEnd(end);
+  }, [sig, chartData.length]);
+
+  const prices = chartData.map((d) => d.price);
   const minY = Math.min(...prices) * 0.97;
   const maxY = Math.max(...prices) * 1.03;
 
-  const chartData = data.map((d) => ({
-    ...d,
-    price: Math.round(d.price * 100) / 100,
-  }));
-
-  // Sample every 6th point for x-axis labels (every 3 hours)
-  const tickIndices = new Set(
-    chartData
-      .map((_, i) => i)
-      .filter((i) => i % 6 === 0),
+  const tickIndices = useMemo(
+    () =>
+      new Set(
+        chartData
+          .map((_, i) => i)
+          .filter((i) => i % 6 === 0),
+      ),
+    [chartData],
   );
+
+  const handleBrushChange = (e: { startIndex?: number; endIndex?: number }) => {
+    if (typeof e?.startIndex === 'number' && typeof e?.endIndex === 'number') {
+      setBrushStart(e.startIndex);
+      setBrushEnd(e.endIndex);
+    }
+  };
+
+  if (chartData.length === 0) {
+    return <div className="h-[220px] bg-surface-el animate-pulse rounded-2xl" />;
+  }
 
   return (
     <div className="w-full select-none">
-      <ResponsiveContainer width="100%" height={220}>
+      <ResponsiveContainer width="100%" height={260}>
         <AreaChart
           data={chartData}
-          margin={{ top: 8, right: 0, left: -20, bottom: 0 }}
+          margin={{ top: 8, right: 8, left: -12, bottom: 4 }}
         >
           <defs>
-            <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={`priceGrad-${gradId}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#FF6B35" stopOpacity={0.35} />
               <stop offset="100%" stopColor="#FF6B35" stopOpacity={0} />
             </linearGradient>
@@ -75,10 +119,8 @@ export default function PriceChart({ data, currencySymbol, basePrice }: Props) {
             type="number"
             domain={['dataMin', 'dataMax']}
             scale="time"
-            tickFormatter={(v, i) =>
-              tickIndices.has(
-                chartData.findIndex((d) => d.timestamp === v),
-              )
+            tickFormatter={(v) =>
+              tickIndices.has(chartData.findIndex((d) => d.timestamp === v))
                 ? formatChartTime(v)
                 : ''
             }
@@ -110,7 +152,7 @@ export default function PriceChart({ data, currencySymbol, basePrice }: Props) {
             dataKey="price"
             stroke="#FF6B35"
             strokeWidth={2}
-            fill="url(#priceGrad)"
+            fill={`url(#priceGrad-${gradId})`}
             dot={false}
             activeDot={{ r: 4, fill: '#FF6B35', stroke: '#0E0E0E', strokeWidth: 2 }}
             unit={currencySymbol}
@@ -118,13 +160,14 @@ export default function PriceChart({ data, currencySymbol, basePrice }: Props) {
 
           <Brush
             dataKey="timestamp"
-            height={20}
-            stroke="#2E2E2E"
+            height={28}
+            stroke="#3f3f46"
             fill="#1A1A1A"
-            travellerWidth={6}
+            travellerWidth={8}
             tickFormatter={() => ''}
-            startIndex={Math.floor(chartData.length * 0.5)}
-            endIndex={chartData.length - 1}
+            startIndex={brushStart}
+            endIndex={brushEnd}
+            onChange={handleBrushChange}
           />
         </AreaChart>
       </ResponsiveContainer>
