@@ -1,10 +1,8 @@
-/** Dial codes for phone input (demo / MVP — extend as needed). */
 
 export interface DialOption {
   code: string;
   flag: string;
   label: string;
-  /** Typical national number length (digits), for placeholder / loose validation */
   placeholder: string;
 }
 
@@ -36,7 +34,6 @@ export function getDialByCode(code: string): DialOption | undefined {
   return DIAL_OPTIONS.find((d) => d.code === code);
 }
 
-/** Minimum national digits (without country code) for a “valid enough” demo */
 const MIN_NATIONAL = 8;
 const MAX_NATIONAL = 15;
 

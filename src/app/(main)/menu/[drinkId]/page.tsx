@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   ArrowLeft,
   TrendingUp,
@@ -12,26 +12,23 @@ import {
   ShoppingCart,
   AlertCircle,
   Check,
-  Timer,
-} from 'lucide-react';
-import { useCountry } from '@/contexts/CountryContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { getDrinkById } from '@/lib/mock-data';
+} from "lucide-react";
+import { useCountry } from "@/contexts/CountryContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePrices } from "@/contexts/PricesContext";
+import { postSale } from "@/lib/api";
 import {
-  formatPrice,
-  formatPriceChange,
-  trendBg,
-  cn,
-  getNextPriceUpdateAt,
-  formatCountdown,
-} from '@/lib/utils';
-import Button from '@/components/ui/Button';
-import Modal from '@/components/ui/Modal';
-import AuthGate from '@/components/auth/AuthGate';
-import dynamic from 'next/dynamic';
-import type { Coupon, PriceTrend, VolumePrice } from '@/types';
+  buildDrinkFromGroup,
+  getPriceEntriesForDrinkRoute,
+} from "@/lib/api/menu";
+import { formatPrice, formatPriceChange, trendBg, cn } from "@/lib/utils";
+import Button from "@/components/ui/Button";
+import Modal from "@/components/ui/Modal";
+import AuthGate from "@/components/auth/AuthGate";
+import dynamic from "next/dynamic";
+import type { Coupon, PriceTrend, VolumePrice } from "@/types";
 
-const PriceChart = dynamic(() => import('@/components/menu/PriceChart'), {
+const PriceChart = dynamic(() => import("@/components/menu/PriceChart"), {
   ssr: false,
   loading: () => (
     <div className="h-[220px] bg-surface-el animate-pulse rounded-2xl" />
@@ -42,86 +39,76 @@ interface PageProps {
   params: { drinkId: string };
 }
 
-function applyVolumePriceUpdate(vol: VolumePrice, basePrice: number): VolumePrice {
-  const delta = (Math.random() - 0.47) * 0.05;
-  const min = Math.round(basePrice * 0.65);
-  const max = Math.round(basePrice * 1.45);
-  const newPrice = Math.max(min, Math.min(max, Math.round(vol.price * (1 + delta))));
-  const newChange = Math.round(((newPrice / basePrice) - 1) * 1000) / 10;
-  const newTrend: PriceTrend =
-    newChange > 0.5 ? 'up' : newChange < -0.5 ? 'down' : 'neutral';
-  return { ...vol, price: newPrice, change: newChange, trend: newTrend };
-}
-
-function useLiveVolume(basePrice: number, initial: VolumePrice | null, intervalMinutes = 5) {
-  const [nextAt, setNextAt] = useState<number>(() => getNextPriceUpdateAt(intervalMinutes));
-  const [remaining, setRemaining] = useState(0);
-  const [vol, setVol] = useState<VolumePrice | null>(initial);
-  const [flashTrend, setFlashTrend] = useState<PriceTrend | null>(null);
-  const [flashGen, setFlashGen] = useState(0);
-
-  // Sync when external selection changes
-  useEffect(() => { setVol(initial); }, [initial]);
-
-  useEffect(() => {
-    const tick = () => {
-      const now = Date.now();
-      const diff = nextAt - now;
-      if (diff <= 0) {
-        const next = getNextPriceUpdateAt(intervalMinutes);
-        setNextAt(next);
-        setRemaining(next - Date.now());
-        setVol((prev) => {
-          if (!prev) return prev;
-          const updated = applyVolumePriceUpdate(prev, basePrice);
-          setFlashTrend(updated.trend);
-          setFlashGen((g) => g + 1);
-          setTimeout(() => setFlashTrend(null), 700);
-          return updated;
-        });
-      } else {
-        setRemaining(diff);
-      }
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [nextAt, intervalMinutes, basePrice]);
-
-  return { vol, remaining, flashTrend, flashGen };
-}
-
 export default function DrinkPage({ params }: PageProps) {
   const router = useRouter();
   const { country } = useCountry();
   const { user, addCoupon } = useAuth();
-  const drink = getDrinkById(params.drinkId, country.id);
 
-  const [selectedVolume, setSelectedVolume] = useState<VolumePrice | null>(null);
+  // Берём цены из глобального контекста — тот же источник данных, что и список меню
+  const { prices, loading, error, flashMap, flashGen } = usePrices();
+
+  const drink = useMemo(() => {
+    if (prices.length === 0) return null;
+    const entries = getPriceEntriesForDrinkRoute(params.drinkId, prices);
+    if (entries.length === 0) return null;
+    return buildDrinkFromGroup(entries, country.id);
+  }, [prices, params.drinkId, country.id]);
+
+  const [selectedVolume, setSelectedVolume] = useState<VolumePrice | null>(
+    null,
+  );
   const [showBuy, setShowBuy] = useState(false);
   const [buying, setBuying] = useState(false);
   const [bought, setBought] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(false);
 
+  // animKey меняется при каждом реальном изменении цены → React переприсваивает
+  // key элементам → CSS-анимация рестартует автоматически
+  const [animKey, setAnimKey] = useState(0);
+  const [animTrend, setAnimTrend] = useState<PriceTrend | null>(null);
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
-    if (drink) setSelectedVolume(drink.volumes[1]); // default: 0.4 л
-  }, [drink]);
+    // Пропускаем первый рендер — анимация только на реальных обновлениях
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!drink) return;
+    const trend = flashMap.get(drink.id);
+    if (trend) {
+      setAnimTrend(trend);
+      setAnimKey((k) => k + 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flashGen]);
 
-  const basePrice = drink?.basePrice ?? 0;
-  const { vol, remaining, flashTrend, flashGen } = useLiveVolume(basePrice, selectedVolume);
-
-  function flashClass(t: PriceTrend | null) {
-    if (t === 'up')   return 'price-flash-up';
-    if (t === 'down') return 'price-flash-down';
-    if (t)            return 'price-flash-neutral';
-    return '';
+  if (loading) {
+    return (
+      <div className="pb-6 animate-pulse">
+        <div className="flex items-center px-4 pt-4 pb-2">
+          <div className="w-8 h-8 rounded-xl bg-surface-el" />
+        </div>
+        <div className="px-4 space-y-4">
+          <div className="bg-surface rounded-3xl overflow-hidden">
+            <div className="h-48 bg-surface-el" />
+            <div className="p-5 space-y-4">
+              <div className="h-5 bg-surface-el rounded w-1/2" />
+              <div className="h-4 bg-surface-el rounded w-3/4" />
+              <div className="h-10 bg-surface-el rounded-xl" />
+            </div>
+          </div>
+          <div className="bg-surface rounded-3xl h-[280px]" />
+        </div>
+      </div>
+    );
   }
 
-  if (!drink) {
+  if (error || !drink) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[60vh] gap-4 px-8 text-center">
         <AlertCircle size={40} className="text-muted" />
-        <p className="text-muted">Напиток не найден</p>
+        <p className="text-muted">{error ?? "Напиток не найден"}</p>
         <Button variant="secondary" onClick={() => router.back()}>
           Назад
         </Button>
@@ -129,30 +116,51 @@ export default function DrinkPage({ params }: PageProps) {
     );
   }
 
-  const activeVol = vol ?? drink.volumes[1];
+  const activeVol =
+    selectedVolume &&
+    drink.volumes.find((v) => v.value === selectedVolume.value)
+      ? selectedVolume
+      : (drink.volumes[Math.floor(drink.volumes.length / 2)] ??
+        drink.volumes[0]);
 
   const TrendIcon =
-    activeVol.trend === 'up'
+    activeVol.trend === "up"
       ? TrendingUp
-      : activeVol.trend === 'down'
-      ? TrendingDown
-      : Minus;
+      : activeVol.trend === "down"
+        ? TrendingDown
+        : Minus;
 
-  function handlePurchase() {
+  async function handlePurchase() {
     if (!user || !drink) return;
     setBuying(true);
+    const soldAt = new Date().toISOString();
+
+    if (activeVol.apiDrinkId) {
+      postSale({
+        pos_item_id: `ce-app-${Date.now()}-${activeVol.apiDrinkId}`,
+        drink_id: activeVol.apiDrinkId,
+        quantity: 1,
+        sold_at: soldAt,
+        source: "app",
+      }).catch((err) =>
+        console.warn("[sale] ошибка регистрации продажи:", err),
+      );
+    }
+
     setTimeout(() => {
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      const couponData: Omit<Coupon, 'id'> = {
+      const expiresAt = new Date(
+        Date.now() + 7 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      const couponData: Omit<Coupon, "id"> = {
         drinkId: drink.id,
         drinkName: drink.name,
         category: drink.category,
         purchasePrice: activeVol.price,
         currency: country.currency,
         currencySymbol: country.currencySymbol,
-        purchasedAt: new Date().toISOString(),
+        purchasedAt: soldAt,
         expiresAt,
-        status: 'active',
+        status: "active",
         qrData: `CE:${drink.id}:${activeVol.price}:${activeVol.value}:${country.id}:${Date.now()}`,
         countryId: country.id,
         volumeLabel: activeVol.label,
@@ -163,7 +171,7 @@ export default function DrinkPage({ params }: PageProps) {
       setTimeout(() => {
         setShowBuy(false);
         setBought(false);
-        router.push('/coupons');
+        router.push("/coupons");
       }, 1500);
     }, 1200);
   }
@@ -182,18 +190,34 @@ export default function DrinkPage({ params }: PageProps) {
           <button
             onClick={() => setNotifEnabled((v) => !v)}
             className={cn(
-              'p-2 rounded-xl transition-colors',
-              notifEnabled ? 'bg-orange/20 text-orange' : 'hover:bg-surface-el text-muted',
+              "p-2 rounded-xl transition-colors",
+              notifEnabled
+                ? "bg-orange/20 text-orange"
+                : "hover:bg-surface-el text-muted",
             )}
-            title={notifEnabled ? 'Уведомление активно' : 'Получать уведомление'}
+            title={
+              notifEnabled ? "Уведомление активно" : "Получать уведомление"
+            }
           >
-            <Bell size={18} fill={notifEnabled ? 'currentColor' : 'none'} />
+            <Bell size={18} fill={notifEnabled ? "currentColor" : "none"} />
           </button>
         </div>
 
         <div className="px-4 space-y-4">
           {/* Hero card */}
-          <div className="bg-surface rounded-3xl overflow-hidden">
+          <div
+            className={cn(
+              "bg-surface rounded-3xl overflow-hidden",
+              animTrend === "up" && animKey > 0
+                ? "dp-hero-up"
+                : animTrend === "down" && animKey > 0
+                  ? "dp-hero-down"
+                  : animTrend === "neutral" && animKey > 0
+                    ? "dp-hero-neutral"
+                    : "",
+            )}
+            key={`hero-${animKey}`}
+          >
             {drink.photoUrl && (
               <div className="relative h-48 w-full">
                 <Image
@@ -209,23 +233,36 @@ export default function DrinkPage({ params }: PageProps) {
             <div className="p-5">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h1 className="text-xl font-bold leading-tight">{drink.name}</h1>
-                  <p className="text-sm text-muted mt-0.5">{drink.description}</p>
+                  <h1 className="text-xl font-bold leading-tight">
+                    {drink.name}
+                  </h1>
+                  <p className="text-sm text-muted mt-0.5">
+                    {drink.description}
+                  </p>
                 </div>
                 <div className="text-right shrink-0 ml-4">
-                  <div
-                    key={flashTrend ? `price-${flashGen}` : 'price'}
-                    className={cn(
-                      'text-2xl font-bold rounded-lg px-1',
-                      flashClass(flashTrend),
-                    )}
-                  >
-                    {formatPrice(activeVol.price, country.currencySymbol)}
+                  <div className="text-2xl font-bold rounded-lg px-1">
+                    <span
+                      key={`price-${animKey}`}
+                      className={cn(
+                        animTrend === "up" && animKey > 0
+                          ? "dp-price-up"
+                          : animTrend === "down" && animKey > 0
+                            ? "dp-price-down"
+                            : animTrend === "neutral" && animKey > 0
+                              ? "dp-price-neutral"
+                              : "",
+                      )}
+                    >
+                      {formatPrice(activeVol.price, country.currencySymbol)}
+                    </span>
                   </div>
                   <div
+                    key={`pct-${animKey}`}
                     className={cn(
-                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium mt-1',
+                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium mt-1",
                       trendBg(activeVol.trend),
+                      animKey > 0 ? "dp-pct-in" : "",
                     )}
                   >
                     <TrendIcon size={12} />
@@ -243,10 +280,10 @@ export default function DrinkPage({ params }: PageProps) {
                       key={v.value}
                       onClick={() => setSelectedVolume(v)}
                       className={cn(
-                        'flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all border',
+                        "flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all border",
                         activeVol.value === v.value
-                          ? 'bg-orange text-white border-orange'
-                          : 'bg-surface-el text-muted border-transparent hover:border-border',
+                          ? "bg-orange text-white border-orange"
+                          : "bg-surface-el text-muted border-transparent hover:border-border",
                       )}
                     >
                       {v.label}
@@ -258,11 +295,32 @@ export default function DrinkPage({ params }: PageProps) {
               {/* Price stats */}
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: 'Базовая', value: `${Math.round(drink.basePrice * (activeVol.value === '0.2' ? 0.75 : activeVol.value === '0.6' ? 1.27 : 1))} ${country.currencySymbol}` },
-                  { label: 'Мин. за 48ч', value: formatPrice(Math.min(...activeVol.priceHistory.map(p => p.price)), country.currencySymbol) },
-                  { label: 'Макс. за 48ч', value: formatPrice(Math.max(...activeVol.priceHistory.map(p => p.price)), country.currencySymbol) },
+                  {
+                    label: "Базовая",
+                    value: formatPrice(
+                      activeVol.basePrice ?? drink.basePrice,
+                      country.currencySymbol,
+                    ),
+                  },
+                  {
+                    label: "Мин.",
+                    value: formatPrice(
+                      Math.min(...activeVol.priceHistory.map((p) => p.price)),
+                      country.currencySymbol,
+                    ),
+                  },
+                  {
+                    label: "Макс.",
+                    value: formatPrice(
+                      Math.max(...activeVol.priceHistory.map((p) => p.price)),
+                      country.currencySymbol,
+                    ),
+                  },
                 ].map(({ label, value }) => (
-                  <div key={label} className="bg-surface-el rounded-2xl p-3 text-center">
+                  <div
+                    key={label}
+                    className="bg-surface-el rounded-2xl p-3 text-center"
+                  >
                     <div className="text-xs text-muted mb-1">{label}</div>
                     <div className="text-sm font-semibold">{value}</div>
                   </div>
@@ -273,22 +331,13 @@ export default function DrinkPage({ params }: PageProps) {
 
           {/* Chart */}
           <div className="bg-surface rounded-3xl p-4">
-            <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <h2 className="text-sm font-semibold">График цены · {activeVol.label}</h2>
-              <div className="flex w-full shrink-0 items-center justify-between gap-3 rounded-2xl border border-orange/25 bg-gradient-to-r from-orange/[0.12] to-transparent px-4 py-3 sm:w-auto sm:min-w-[11rem]">
-                <div className="flex items-center gap-2 text-xs font-medium text-muted">
-                  <Timer className="h-5 w-5 shrink-0 text-orange" />
-                  <span className="leading-tight">До обновления цены</span>
-                </div>
-                <span className="text-3xl font-extrabold tabular-nums tracking-tight text-orange sm:text-4xl">
-                  {formatCountdown(remaining)}
-                </span>
-              </div>
-            </div>
+            <h2 className="text-sm font-semibold mb-3">
+              График цены · {activeVol.label}
+            </h2>
             <PriceChart
               data={activeVol.priceHistory}
               currencySymbol={country.currencySymbol}
-              basePrice={drink.basePrice}
+              basePrice={activeVol.basePrice ?? drink.basePrice}
             />
             <p className="text-xs text-muted mt-2 text-center">
               Перетащи нижний слайдер для зума
@@ -299,18 +348,23 @@ export default function DrinkPage({ params }: PageProps) {
           <div className="bg-surface rounded-3xl p-5 space-y-4">
             <div>
               <h2 className="text-sm font-semibold mb-2">Описание</h2>
-              <p className="text-sm text-muted leading-relaxed">{drink.description}</p>
+              <p className="text-sm text-muted leading-relaxed">
+                {drink.description}
+              </p>
             </div>
             <div>
               <h2 className="text-sm font-semibold mb-3">КБЖУ на порцию</h2>
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { label: 'Кал.',  value: `${drink.calories}` },
-                  { label: 'Белки', value: `${drink.proteins}г` },
-                  { label: 'Жиры',  value: `${drink.fats}г` },
-                  { label: 'Углев.', value: `${drink.carbs}г` },
+                  { label: "Кал.", value: `${drink.calories}` },
+                  { label: "Белки", value: `${drink.proteins}г` },
+                  { label: "Жиры", value: `${drink.fats}г` },
+                  { label: "Углев.", value: `${drink.carbs}г` },
                 ].map(({ label, value }) => (
-                  <div key={label} className="bg-surface-el rounded-2xl p-2.5 text-center">
+                  <div
+                    key={label}
+                    className="bg-surface-el rounded-2xl p-2.5 text-center"
+                  >
                     <div className="text-xs text-muted">{label}</div>
                     <div className="text-sm font-semibold mt-0.5">{value}</div>
                   </div>
@@ -322,12 +376,12 @@ export default function DrinkPage({ params }: PageProps) {
           {/* Buy button */}
           <Button fullWidth size="lg" onClick={() => setShowBuy(true)}>
             <ShoppingCart size={18} />
-            Купить {activeVol.label} за {formatPrice(activeVol.price, country.currencySymbol)}
+            Купить {activeVol.label} за{" "}
+            {formatPrice(activeVol.price, country.currencySymbol)}
           </Button>
         </div>
       </div>
 
-      {/* Purchase modal */}
       <Modal
         open={showBuy}
         onClose={() => !buying && setShowBuy(false)}
@@ -339,18 +393,31 @@ export default function DrinkPage({ params }: PageProps) {
               <Check size={32} className="text-success" />
             </div>
             <p className="font-semibold text-lg">Куплено!</p>
-            <p className="text-muted text-sm text-center">Купон добавлен в раздел Купоны</p>
+            <p className="text-muted text-sm text-center">
+              Купон добавлен в раздел Купоны
+            </p>
           </div>
         ) : (
           <div className="space-y-5">
             <div className="bg-surface-el rounded-2xl p-4 flex items-center gap-4">
               {drink.photoUrl ? (
                 <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0">
-                  <Image src={drink.photoUrl} alt={drink.name} fill className="object-cover" unoptimized sizes="48px" />
+                  <Image
+                    src={drink.photoUrl}
+                    alt={drink.name}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                    sizes="48px"
+                  />
                 </div>
               ) : (
                 <span className="text-3xl shrink-0">
-                  {drink.category === 'coffee' ? '☕' : drink.category === 'lemonade' ? '🍋' : '🍵'}
+                  {drink.category === "coffee"
+                    ? "☕"
+                    : drink.category === "lemonade"
+                      ? "🍋"
+                      : "🍵"}
                 </span>
               )}
               <div className="flex-1 min-w-0">
@@ -365,7 +432,7 @@ export default function DrinkPage({ params }: PageProps) {
             <div>
               <p className="text-sm text-muted mb-3">Способ оплаты</p>
               <div className="grid grid-cols-2 gap-2">
-                {['Карта', 'Apple Pay', 'Google Pay', 'СБП'].map((method) => (
+                {["Карта", "Apple Pay", "Google Pay", "СБП"].map((method) => (
                   <div
                     key={method}
                     className="bg-surface-el rounded-xl px-4 py-3 text-sm text-muted text-center border border-border relative overflow-hidden"
@@ -377,22 +444,33 @@ export default function DrinkPage({ params }: PageProps) {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-muted mt-2 text-center">Оплата через приложение в разработке</p>
+              <p className="text-xs text-muted mt-2 text-center">
+                Оплата через приложение в разработке
+              </p>
             </div>
 
             <div className="border-t border-border pt-4">
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-muted">Напиток</span>
-                <span>{formatPrice(activeVol.price, country.currencySymbol)}</span>
+                <span>
+                  {formatPrice(activeVol.price, country.currencySymbol)}
+                </span>
               </div>
               <div className="flex justify-between font-semibold text-base">
                 <span>Итого</span>
-                <span className="text-orange">{formatPrice(activeVol.price, country.currencySymbol)}</span>
+                <span className="text-orange">
+                  {formatPrice(activeVol.price, country.currencySymbol)}
+                </span>
               </div>
             </div>
 
-            <Button fullWidth size="lg" onClick={handlePurchase} loading={buying}>
-              {buying ? 'Оформляем…' : 'Подтвердить (демо)'}
+            <Button
+              fullWidth
+              size="lg"
+              onClick={handlePurchase}
+              loading={buying}
+            >
+              {buying ? "Оформляем…" : "Подтвердить (демо)"}
             </Button>
             <p className="text-xs text-muted text-center -mt-2">
               Это демо — купон будет создан без реальной оплаты

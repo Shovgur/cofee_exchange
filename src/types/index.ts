@@ -17,10 +17,13 @@ export interface PricePoint {
 
 // Volume price (0.2 / 0.4 / 0.6 л)
 export interface VolumePrice {
-  value: string;          // '0.2' | '0.4' | '0.6'
-  label: string;          // '0.2 л'
+  value: string;       
+  label: string;         
   price: number;
-  change: number;         // percent
+  /** Базовая цена с бэка для этого объёма (если есть). */
+  basePrice?: number;
+  apiDrinkId?: string;
+  change: number;        
   trend: PriceTrend;
   priceHistory: PricePoint[];
 }
@@ -68,8 +71,8 @@ export interface IpoDrink {
   preorderPrice: number;
   countryId: string;
   status: IpoStatus;
-  saleStartsAt: string;   // ISO date
-  releaseDate?: string;   // ISO date when fully released into menu
+  saleStartsAt: string;   
+  releaseDate?: string;  
   volumes: { label: string; value: string; preorderPrice: number }[];
 }
 

@@ -1,4 +1,6 @@
-import type { Drink, DrinkCategory, PriceTrend, PricePoint, VolumePrice } from '@/types';
+import type { DrinkCategory, PriceTrend, PricePoint } from '@/types';
+
+// ─── Price history generation (used for chart display) ────────────────────────
 
 function seededRand(seed: number) {
   let s = seed;
@@ -8,7 +10,11 @@ function seededRand(seed: number) {
   };
 }
 
-function generatePriceHistory(basePrice: number, seed: number): PricePoint[] {
+/**
+ * Генерирует псевдо-историческую кривую цены для графика.
+ * Используется в menu-from-api.ts, т.к. API не отдаёт историю.
+ */
+export function generatePriceHistory(basePrice: number, seed: number): PricePoint[] {
   const rand = seededRand(seed);
   const now = Date.now();
   const points: PricePoint[] = [];
@@ -24,44 +30,16 @@ function generatePriceHistory(basePrice: number, seed: number): PricePoint[] {
   return points;
 }
 
-function computeTrend(change: number): PriceTrend {
+export function computeTrend(change: number): PriceTrend {
   if (change > 0.5) return 'up';
   if (change < -0.5) return 'down';
   return 'neutral';
 }
 
-// Multipliers per volume size
-const VOLUME_MULTIPLIERS = [
-  { value: '0.2', label: '0.2 л', multiplier: 0.75 },
-  { value: '0.4', label: '0.4 л', multiplier: 1.0 },
-  { value: '0.6', label: '0.6 л', multiplier: 1.27 },
-];
+// ─── Drink templates (static metadata: photo, description, category) ─────────
+// Цены больше не хранятся здесь — они приходят с бэкенда через /api/v1/prices.
 
-// Slight change variation per volume
-const VOLUME_CHANGE_DELTA: Record<string, number> = {
-  '0.2': 0.4,
-  '0.4': 0.0,
-  '0.6': -0.3,
-};
-
-function buildVolumes(basePrice: number, baseChange: number, seed: number): VolumePrice[] {
-  return VOLUME_MULTIPLIERS.map(({ value, label, multiplier }, idx) => {
-    const price = Math.round(basePrice * multiplier);
-    const change = Math.round((baseChange + VOLUME_CHANGE_DELTA[value]) * 10) / 10;
-    const history = generatePriceHistory(price, seed + idx * 997);
-    const current = history[history.length - 1].price;
-    return {
-      value,
-      label,
-      price: current,
-      change,
-      trend: computeTrend(change),
-      priceHistory: history,
-    };
-  });
-}
-
-interface DrinkTemplate {
+export interface DrinkTemplate {
   id: string;
   name: string;
   nameShort: string;
@@ -75,15 +53,14 @@ interface DrinkTemplate {
   photoUrl: string;
 }
 
-const DRINK_TEMPLATES: DrinkTemplate[] = [
+export const DRINK_TEMPLATES: DrinkTemplate[] = [
   {
     id: 'espresso',
     name: 'Эспрессо',
     nameShort: 'Эспрессо',
     category: 'coffee',
     volume: '30 мл',
-    description:
-      'Классический эспрессо из зерна арабики высшего сорта. Насыщенный вкус с карамельным послевкусием.',
+    description: 'Классический эспрессо из зерна арабики высшего сорта. Насыщенный вкус с карамельным послевкусием.',
     calories: 5,
     proteins: 0.3,
     fats: 0.1,
@@ -209,81 +186,59 @@ const DRINK_TEMPLATES: DrinkTemplate[] = [
   },
 ];
 
-// Base prices in RUB
-const RU_PRICES: Record<string, number> = {
-  espresso: 149,
-  americano: 179,
-  cappuccino: 219,
-  latte: 239,
-  'flat-white': 229,
-  'lemonade-classic': 199,
-  'lemonade-mango': 229,
-  'lemonade-matcha': 219,
-  'tea-black': 169,
-  'tea-green': 169,
-};
+// ─── Name matching utilities (used by menu-from-api.ts and drink-category-from-api.ts) ─
 
-// Base prices in KZT
-const KZ_PRICES: Record<string, number> = {
-  espresso: 750,
-  americano: 890,
-  cappuccino: 1090,
-  latte: 1190,
-  'flat-white': 1140,
-  'lemonade-classic': 990,
-  'lemonade-mango': 1140,
-  'lemonade-matcha': 1090,
-  'tea-black': 840,
-  'tea-green': 840,
-};
-
-// Price changes (%)
-const PRICE_CHANGES: Record<string, number> = {
-  espresso: 3.2,
-  americano: -1.8,
-  cappuccino: 0.0,
-  latte: 5.4,
-  'flat-white': -2.1,
-  'lemonade-classic': 0.0,
-  'lemonade-mango': 7.8,
-  'lemonade-matcha': -3.5,
-  'tea-black': 1.2,
-  'tea-green': 0.0,
-};
-
-function buildDrink(template: DrinkTemplate, countryId: string): Drink {
-  const priceMap = countryId === 'KZ' ? KZ_PRICES : RU_PRICES;
-  const base = priceMap[template.id] ?? 199;
-  const change = PRICE_CHANGES[template.id] ?? 0;
-  const seed = base + template.id.charCodeAt(0);
-  const history = generatePriceHistory(base, seed);
-  const prices = history.map((p) => p.price);
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
-  const current = history[history.length - 1].price;
-
-  return {
-    ...template,
-    currentPrice: current,
-    basePrice: base,
-    minPrice: Math.round(min * 100) / 100,
-    maxPrice: Math.round(max * 100) / 100,
-    priceChange: change,
-    trend: computeTrend(change),
-    priceHistory: history,
-    countryId,
-    available: true,
-    volumes: buildVolumes(base, change, seed),
-  };
+/** Lowercase, ё→е, trim — для сравнения имён с бэка и шаблонов. */
+export function normalizeDrinkName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-export const DRINKS_RU: Drink[] = DRINK_TEMPLATES.map((t) => buildDrink(t, 'RU'));
-export const DRINKS_KZ: Drink[] = DRINK_TEMPLATES.map((t) => buildDrink(t, 'KZ'));
-
-export function getDrinksByCountry(countryId: string): Drink[] {
-  return countryId === 'KZ' ? DRINKS_KZ : DRINKS_RU;
+function tokenizeDrinkName(name: string): string[] {
+  return normalizeDrinkName(name)
+    .split(/[^a-zа-я0-9]+/i)
+    .filter((w) => w.length >= 2);
 }
 
-export function getDrinkById(id: string, countryId: string): Drink | undefined {
-  return getDrinksByCountry(countryId).find((d) => d.id === id);
+/**
+ * Найти шаблон по имени из API.
+ * Бэк может отдавать «Чай зелёный», а в шаблонах — «Зелёный чай с жасмином»;
+ * точного совпадения нет → нормализация и совпадение по токенам.
+ */
+export function findTemplateByName(name: string): DrinkTemplate | undefined {
+  if (!name.trim()) return undefined;
+
+  const norm = normalizeDrinkName(name);
+
+  // 1. Точное совпадение после нормализации
+  const exact = DRINK_TEMPLATES.find((t) => normalizeDrinkName(t.name) === norm);
+  if (exact) return exact;
+
+  // 2. Шаблон содержит API-имя (API — короткий алиас шаблона).
+  //    Обратное направление не используем: «Айс латте» содержит «Латте» — другой напиток.
+  const bySubstring = DRINK_TEMPLATES.find((t) => normalizeDrinkName(t.name).includes(norm));
+  if (bySubstring) return bySubstring;
+
+  // 3. Все значимые слова из API присутствуют в названии шаблона
+  const apiTokens = tokenizeDrinkName(name);
+  if (apiTokens.length === 0) return undefined;
+
+  let best: DrinkTemplate | undefined;
+  let bestHits = -1;
+  for (const t of DRINK_TEMPLATES) {
+    const tNorm = normalizeDrinkName(t.name);
+    const hits = apiTokens.filter((tok) => tNorm.includes(tok)).length;
+    if (hits > bestHits) { bestHits = hits; best = t; }
+  }
+  if (best && bestHits === apiTokens.length) return best;
+
+  return undefined;
+}
+
+/** Найти шаблон по его статическому id (например 'espresso'). */
+export function findTemplateById(id: string): DrinkTemplate | undefined {
+  return DRINK_TEMPLATES.find((t) => t.id === id);
 }
