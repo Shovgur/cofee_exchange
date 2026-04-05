@@ -2,10 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Newspaper, MapPin, Coffee, Ticket, LogIn, User, Timer } from 'lucide-react';
-import { cn, formatCountdown } from '@/lib/utils';
+import { Newspaper, MapPin, Coffee, Ticket, LogIn, User } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePrices } from '@/contexts/PricesContext';
 
 const NAV_ITEMS_GUEST = [
   { href: '/feed', icon: Newspaper, label: 'Лента' },
@@ -26,7 +25,6 @@ const NAV_ITEMS_AUTH = [
 export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { secondsLeft } = usePrices();
   const items = user ? NAV_ITEMS_AUTH : NAV_ITEMS_GUEST;
 
   return (
@@ -36,15 +34,6 @@ export default function BottomNav() {
         'border-t border-border bg-surface backdrop-blur-md',
       )}
     >
-      {/* Countdown strip — always visible */}
-      <div className="flex items-center justify-center gap-1.5 py-1 bg-orange/5 border-b border-orange/10">
-        <Timer size={10} className="text-orange" strokeWidth={2} />
-        <span className="text-[10px] font-mono font-bold tabular-nums text-orange">
-          {formatCountdown(secondsLeft * 1000)}
-        </span>
-        <span className="text-[10px] text-muted">до обновления цен</span>
-      </div>
-
       <div className="flex items-stretch max-w-lg mx-auto w-full">
         {items.map(({ href, icon: Icon, label }) => {
           const isActive =

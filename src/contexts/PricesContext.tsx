@@ -11,18 +11,11 @@ import {
 } from 'react';
 import { fetchAllPrices, type ApiPriceItem } from '@/lib/api';
 import { buildDrinkFromGroup } from '@/lib/api/menu';
-import { getNextPriceUpdateAt } from '@/lib/utils';
 import { useCountry } from '@/contexts/CountryContext';
 import type { Drink, PriceTrend } from '@/types';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PRICE_INTERVAL_MINUTES = 5;
-
-/** Секунд до следующей 5-минутной метки по системным часам (3:45, 3:50, 3:55…) */
-function secondsToNextBoundary(): number {
-  return Math.max(1, Math.ceil((getNextPriceUpdateAt(PRICE_INTERVAL_MINUTES) - Date.now()) / 1000));
-}
+// Бэкенд пересчитывает цены каждые 15 секунд на основе продаж за последние 5 минут
+const POLL_INTERVAL_MS = 15_000;
 
 // ─── Context shape ────────────────────────────────────────────────────────────
 
@@ -31,7 +24,6 @@ interface PricesContextValue {
   prices: ApiPriceItem[];
   loading: boolean;
   error: string | null;
-  secondsLeft: number;
   flashMap: Map<string, PriceTrend>;
   flashGen: number;
 }
@@ -53,15 +45,11 @@ export function PricesProvider({ children }: { children: ReactNode }) {
   const [prices, setPrices] = useState<ApiPriceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Инициализируется сразу корректным значением — при любом старте приложения
-  const [secondsLeft, setSecondsLeft] = useState(secondsToNextBoundary);
   const [flashMap, setFlashMap] = useState<Map<string, PriceTrend>>(new Map());
   const [flashGen, setFlashGen] = useState(0);
 
   const abortRef = useRef<AbortController | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Следующая глобальная метка обновления (кратная 5 мин по системным часам)
-  const nextBoundaryRef = useRef<number>(getNextPriceUpdateAt(PRICE_INTERVAL_MINUTES));
 
   const doFetch = useCallback(
     (silent = false) => {
@@ -94,7 +82,12 @@ export function PricesProvider({ children }: { children: ReactNode }) {
               const map = new Map<string, PriceTrend>();
               for (const nd of built) {
                 const od = prev.find((d) => d.id === nd.id);
-                if (od && od.currentPrice !== nd.currentPrice) {
+                if (!od) continue;
+                // Проверяем любой объём — не только средний (currentPrice)
+                const anyVolumeChanged =
+                  od.currentPrice !== nd.currentPrice ||
+                  nd.volumes.some((nv, i) => od.volumes[i]?.price !== nv.price);
+                if (anyVolumeChanged) {
                   map.set(nd.id, nd.trend);
                 }
               }
@@ -109,9 +102,6 @@ export function PricesProvider({ children }: { children: ReactNode }) {
           });
 
           setPrices(data.prices);
-          // После фетча сразу вычисляем следующую границу
-          nextBoundaryRef.current = getNextPriceUpdateAt(PRICE_INTERVAL_MINUTES);
-          setSecondsLeft(secondsToNextBoundary());
           setLoading(false);
         })
         .catch((err) => {
@@ -132,20 +122,10 @@ export function PricesProvider({ children }: { children: ReactNode }) {
     };
   }, [doFetch]);
 
-  // Таймер по настенным часам: тикает каждую секунду, срабатывает на кратных 5 мин метках.
-  // Все пользователи видят одинаковый отсчёт вне зависимости от того когда зашли.
+  // Опрос каждые 15 секунд — бэкенд обновляет цены с таким интервалом
   useEffect(() => {
-    const tick = setInterval(() => {
-      const remaining = Math.ceil((nextBoundaryRef.current - Date.now()) / 1000);
-      if (remaining <= 0) {
-        nextBoundaryRef.current = getNextPriceUpdateAt(PRICE_INTERVAL_MINUTES);
-        setSecondsLeft(secondsToNextBoundary());
-        doFetch(true);
-      } else {
-        setSecondsLeft(remaining);
-      }
-    }, 1000);
-    return () => clearInterval(tick);
+    const id = setInterval(() => doFetch(true), POLL_INTERVAL_MS);
+    return () => clearInterval(id);
   }, [doFetch]);
 
   return (
@@ -155,7 +135,6 @@ export function PricesProvider({ children }: { children: ReactNode }) {
         prices,
         loading,
         error,
-        secondsLeft,
         flashMap,
         flashGen,
       }}

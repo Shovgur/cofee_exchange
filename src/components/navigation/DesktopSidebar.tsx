@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Newspaper, MapPin, Coffee, Ticket, LogIn, User,
-  Globe, Star, LogOut, ChevronRight, Timer,
+  Globe, Star, LogOut, ChevronRight,
 } from 'lucide-react';
-import { cn, formatCountdown } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
 import { usePrices } from '@/contexts/PricesContext';
@@ -35,7 +35,6 @@ export default function DesktopSidebar() {
   const { user, logout } = useAuth();
   const { country } = useCountry();
 
-  const { secondsLeft } = usePrices();
   const [showCountry, setShowCountry] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
 
@@ -88,21 +87,6 @@ export default function DesktopSidebar() {
             );
           })}
         </nav>
-
-        {/* Countdown timer */}
-        <div className="mx-3 mb-2 flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-orange/8 border border-orange/15">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange/15">
-            <Timer size={13} className="text-orange" strokeWidth={2} />
-          </div>
-          <div className="min-w-0">
-            <div className="text-[10px] text-muted uppercase tracking-wider leading-none mb-0.5">
-              До обновления цен
-            </div>
-            <div className="text-base font-mono font-bold tabular-nums text-orange leading-none">
-              {formatCountdown(secondsLeft * 1000)}
-            </div>
-          </div>
-        </div>
 
         {/* Bottom: profile / auth + country */}
         <div className="px-3 pb-6 space-y-2 border-t border-border pt-4">
