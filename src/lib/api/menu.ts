@@ -8,7 +8,6 @@ import {
   normalizeDrinkName,
 } from '@/lib/mock-data/menu';
 
-// ─── Category inference ───────────────────────────────────────────────────────
 
 const BACKEND_NAME_TO_CATEGORY: Record<string, DrinkCategory> = {
   эспрессо: 'coffee',
@@ -36,7 +35,7 @@ export function inferDrinkCategoryFromApiName(name: string): DrinkCategory {
   return 'coffee';
 }
 
-// ─── Route ID helpers ─────────────────────────────────────────────────────────
+// ─── Route ID helpers
 
 const CYR_TO_LAT: [string, string][] = [
   ['а', 'a'], ['б', 'b'], ['в', 'v'], ['г', 'g'], ['д', 'd'], ['е', 'e'], ['ё', 'e'], ['ж', 'zh'],
@@ -56,7 +55,39 @@ export function drinkRouteId(templateId: string | undefined, displayName: string
   return templateId ?? drinkRouteIdFromName(displayName);
 }
 
-// ─── Data transformation: API → UI model ──────────────────────────────────────
+function apiBasePrice(entry: ApiPriceItem): number {
+  return parsePrice(entry.base_price ?? entry.defaultSalePrice);
+}
+
+/** Литраж для сортировки и seed: сначала unitCapacity, иначе парсинг volume */
+function entryCapacityLiters(entry: ApiPriceItem): number {
+  if (typeof entry.unitCapacity === 'number' && Number.isFinite(entry.unitCapacity)) {
+    return entry.unitCapacity;
+  }
+  const v = parseFloat(entry.volume ?? '');
+  return Number.isFinite(v) ? v : 0;
+}
+
+/** Стабильная строка для VolumePrice.value / ключей UI */
+function litersToValueKey(liters: number): string {
+  if (!Number.isFinite(liters)) return '0';
+  const s = liters.toFixed(4).replace(/\.?0+$/, '');
+  return s || '0';
+}
+
+function entryVolumeValue(entry: ApiPriceItem): string {
+  const v = entry.volume?.trim();
+  if (v) return v;
+  return litersToValueKey(entryCapacityLiters(entry));
+}
+
+function entryVolumeLabel(entry: ApiPriceItem): string {
+  const v = entry.volume?.trim();
+  if (v) return `${v} л`;
+  return `${litersToValueKey(entryCapacityLiters(entry))} л`;
+}
+
+// ─── Data transformation: API → UI model
 
 export function buildDrinkFromGroup(
   entries: ApiPriceItem[],
@@ -68,21 +99,24 @@ export function buildDrinkFromGroup(
   const template = findTemplateByName(name);
   const category = template?.category ?? inferDrinkCategoryFromApiName(name);
 
-  const sorted = [...entries].sort((a, b) => parseFloat(a.volume) - parseFloat(b.volume));
+  const sorted = [...entries].sort(
+    (a, b) => entryCapacityLiters(a) - entryCapacityLiters(b),
+  );
 
   const volumes: VolumePrice[] = sorted.map((entry) => {
-    const basePrice = parsePrice(entry.base_price);
+    const basePrice = apiBasePrice(entry);
     const currentPrice = parsePrice(entry.current_price);
     const currentPct = parsePrice(entry.current_pct);
     const trend: PriceTrend = entry.is_fixed ? 'neutral' : computeTrend(currentPct);
-    const seed = basePrice + (name.charCodeAt(0) || 0) + parseFloat(entry.volume || '0') * 100;
+    const cap = entryCapacityLiters(entry);
+    const seed = basePrice + (name.charCodeAt(0) || 0) + cap * 100;
     const history = generatePriceHistory(basePrice, seed);
     if (history.length > 0) {
       history[history.length - 1] = { ...history[history.length - 1], price: currentPrice };
     }
     return {
-      value: entry.volume,
-      label: `${entry.volume} л`,
+      value: entryVolumeValue(entry),
+      label: entryVolumeLabel(entry),
       price: currentPrice,
       basePrice,
       apiDrinkId: entry.drink_id,
@@ -94,7 +128,7 @@ export function buildDrinkFromGroup(
 
   const midVol = volumes[Math.floor(volumes.length / 2)] ?? volumes[0];
   const firstEntry = sorted[0];
-  const basePrice = parsePrice(firstEntry.base_price);
+  const basePrice = apiBasePrice(firstEntry);
   const minPct = parsePrice(firstEntry.min_pct);
   const maxPct = parsePrice(firstEntry.max_pct);
   const seed = basePrice + (name.charCodeAt(0) || 0);

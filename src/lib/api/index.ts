@@ -1,8 +1,14 @@
 export interface ApiPriceItem {
   drink_id: string;
+  pos_item_id?: string;
   name: string;
-  volume: string;
-  base_price: string;
+  /** Литраж строкой; может отсутствовать, если задан unitCapacity */
+  volume?: string;
+  /** Объём в литрах (например 0.2) — приоритетно для value/label/sort, если volume нет */
+  unitCapacity?: number;
+  base_price?: string;
+  /** Базовая цена с бэка (альтернатива base_price) */
+  defaultSalePrice?: string;
   current_price: string;
   current_pct: string;
   min_pct: string;
@@ -38,12 +44,10 @@ export interface ApiSaleBatchRequest {
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
 /**
- * Временный обход mixed-content (HTTPS страница → HTTP API):`.
-
- Когда API будет доступен по HTTPS на нормальном домене — убрать эту функцию и снова собирать
-  URL только как `${BASE_URL}/api/...`
+ * Временный обход mixed-content (HTTPS страница → HTTP API).
+ * Когда API будет по HTTPS на домене — убрать и собирать URL как `${BASE_URL}/api/...`.
  */
-function buildApiPath(pathAfterApiPrefix: string): string {
+export function buildApiPath(pathAfterApiPrefix: string): string {
   const isBrowser = typeof window !== "undefined";
   const needsProxy =
     isBrowser &&
@@ -109,6 +113,81 @@ export async function fetchDrinkPrice(drinkId: string): Promise<ApiPriceItem> {
     console.error("[API] fetchDrinkPrice — не JSON:", rawText.slice(0, 300));
     throw new Error("Сервер вернул не JSON");
   }
+}
+
+// Admin: Settings
+
+export interface ApiAdminSettings {
+  id: number;
+  version: number;
+  enabled_catalog_ids: string[];
+  price_update_interval_sec: number;
+  sales_analysis_window_sec: number;
+  neutral_zone_percent: string;
+  max_step_up_pct: string;
+  max_step_down_pct: string;
+  max_step_to_center_pct: string;
+  center_return_full_distance_pct: string;
+  default_sensitivity: string;
+  default_min_pct: string;
+  default_max_pct: string;
+  price_rounding_step: string;
+  fixed_items_affect_market: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiAdminSettingsUpdate {
+  enabled_catalog_ids: string[];
+  price_update_interval_sec: number;
+  sales_analysis_window_sec: number;
+  neutral_zone_percent: number;
+  max_step_up_pct: number;
+  max_step_down_pct: number;
+  max_step_to_center_pct: number;
+  center_return_full_distance_pct: number;
+  default_sensitivity: number;
+  default_min_pct: number;
+  default_max_pct: number;
+  price_rounding_step: number;
+  fixed_items_affect_market: boolean;
+}
+
+export interface ApiAdminSettingsHistoryItem {
+  id: number;
+  version: number;
+  created_at: string;
+}
+
+export async function fetchAdminSettings(): Promise<ApiAdminSettings> {
+  const url = buildApiPath('v1/admin/settings');
+  const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
+  const raw = await res.text();
+  if (!res.ok) throw new Error(`Ошибка загрузки настроек: ${res.status}`);
+  try { return JSON.parse(raw) as ApiAdminSettings; }
+  catch { throw new Error('Сервер вернул не JSON'); }
+}
+
+export async function putAdminSettings(payload: ApiAdminSettingsUpdate): Promise<ApiAdminSettings> {
+  const url = buildApiPath('v1/admin/settings');
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const raw = await res.text();
+  if (!res.ok) throw new Error(`Ошибка сохранения настроек: ${res.status}`);
+  try { return JSON.parse(raw) as ApiAdminSettings; }
+  catch { throw new Error('Сервер вернул не JSON'); }
+}
+
+export async function fetchAdminSettingsHistory(): Promise<ApiAdminSettingsHistoryItem[]> {
+  const url = buildApiPath('v1/admin/settings/history');
+  const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
+  const raw = await res.text();
+  if (!res.ok) throw new Error(`Ошибка загрузки истории: ${res.status}`);
+  try { return JSON.parse(raw) as ApiAdminSettingsHistoryItem[]; }
+  catch { throw new Error('Сервер вернул не JSON'); }
 }
 
 /** Регистрирует одну продажу (POST /api/v1/sales). */

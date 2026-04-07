@@ -13,6 +13,7 @@ function isAllowedProxyPath(path: string): boolean {
   if (!path.startsWith('v1/')) return false;
   if (path === 'v1/prices' || path.startsWith('v1/prices/')) return true;
   if (path === 'v1/sales' || path.startsWith('v1/sales/')) return true;
+  if (path === 'v1/admin/settings' || path.startsWith('v1/admin/')) return true;
   return false;
 }
 
@@ -57,5 +58,9 @@ export async function GET(request: NextRequest, context: { params: { slug: strin
 }
 
 export async function POST(request: NextRequest, context: { params: { slug: string[] } }) {
+  return proxy(request, context.params.slug);
+}
+
+export async function PUT(request: NextRequest, context: { params: { slug: string[] } }) {
   return proxy(request, context.params.slug);
 }

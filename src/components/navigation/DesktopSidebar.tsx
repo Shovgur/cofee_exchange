@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Newspaper, MapPin, Coffee, Ticket, LogIn, User,
-  Globe, Star, LogOut, ChevronRight,
+  Globe, Star, LogOut, ChevronRight, SlidersHorizontal, GlassWater,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +20,11 @@ const NAV_ITEMS = [
   { href: '/map', icon: MapPin, label: 'Карта' },
   { href: '/menu', icon: Coffee, label: 'Меню' },
   { href: '/coupons', icon: Ticket, label: 'Купоны' },
+];
+
+const ADMIN_NAV_ITEMS = [
+  { href: '/admin', icon: SlidersHorizontal, label: 'Настройки', exact: true },
+  { href: '/admin/drinks', icon: GlassWater, label: 'Напитки', exact: false },
 ];
 
 const LOYALTY_COLORS: Record<string, string> = {
@@ -87,6 +92,40 @@ export default function DesktopSidebar() {
             );
           })}
         </nav>
+
+        {/* Admin nav */}
+        <div className="px-3 pb-2 border-t border-border pt-3 space-y-0.5">
+          <div className="px-3 pb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted/60">
+              Админ
+            </span>
+          </div>
+          {ADMIN_NAV_ITEMS.map(({ href, icon: Icon, label, exact }) => {
+            const isActive = exact ? pathname === href : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150',
+                  isActive
+                    ? 'bg-orange/15 text-orange'
+                    : 'text-muted hover:bg-surface-el hover:text-white',
+                )}
+              >
+                <Icon
+                  size={18}
+                  strokeWidth={isActive ? 2.5 : 1.8}
+                  className={cn('flex-shrink-0', isActive && 'scale-105')}
+                />
+                <span className="text-sm font-medium">{label}</span>
+                {isActive && (
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-orange" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
 
         {/* Bottom: profile / auth + country */}
         <div className="px-3 pb-6 space-y-2 border-t border-border pt-4">
