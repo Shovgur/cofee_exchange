@@ -120,7 +120,6 @@ export async function fetchDrinkPrice(drinkId: string): Promise<ApiPriceItem> {
 export interface ApiAdminSettings {
   id: number;
   version: number;
-  enabled_catalog_ids: string[];
   price_update_interval_sec: number;
   sales_analysis_window_sec: number;
   neutral_zone_percent: string;
@@ -138,7 +137,6 @@ export interface ApiAdminSettings {
 }
 
 export interface ApiAdminSettingsUpdate {
-  enabled_catalog_ids: string[];
   price_update_interval_sec: number;
   sales_analysis_window_sec: number;
   neutral_zone_percent: number;

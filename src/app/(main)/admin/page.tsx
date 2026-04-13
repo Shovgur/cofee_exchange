@@ -41,7 +41,6 @@ function fmt(iso: string) {
 
 function settingsToForm(s: ApiAdminSettings): FormState {
   return {
-    enabled_catalog_ids: s.enabled_catalog_ids.join(", "),
     price_update_interval_sec: String(s.price_update_interval_sec),
     sales_analysis_window_sec: String(s.sales_analysis_window_sec),
     neutral_zone_percent: s.neutral_zone_percent,
@@ -58,12 +57,7 @@ function settingsToForm(s: ApiAdminSettings): FormState {
 }
 
 function formToPayload(f: FormState): ApiAdminSettingsUpdate {
-  const ids = f.enabled_catalog_ids
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
   return {
-    enabled_catalog_ids: ids,
     price_update_interval_sec: Number(f.price_update_interval_sec) || 0,
     sales_analysis_window_sec: Number(f.sales_analysis_window_sec) || 0,
     neutral_zone_percent: parseFloat(f.neutral_zone_percent) || 0,
@@ -83,7 +77,6 @@ function formToPayload(f: FormState): ApiAdminSettingsUpdate {
 //  Types
 
 interface FormState {
-  enabled_catalog_ids: string;
   price_update_interval_sec: string;
   sales_analysis_window_sec: string;
   neutral_zone_percent: string;
@@ -271,18 +264,19 @@ export default function AdminPage() {
 
             <div className="px-5">
               <p className="text-[11px] text-muted uppercase tracking-wider pt-3 pb-2">
-                На бэкенде (не редактируется здесь)
-              </p>
-              <FieldRow
-                label="Интервал обновления цен, сек"
-                hint="Хранится на сервере. Частота опроса цен в приложении задаётся в коде; при «Сохранить» это значение уходит без изменений."
-              >
-                <NumInput value={form.price_update_interval_sec} readOnly />
-              </FieldRow>
-
-              <p className="text-[11px] text-muted uppercase tracking-wider pt-4 pb-2 border-t border-border mt-2">
                 Редактирование
               </p>
+
+              <FieldRow
+                label="Интервал обновления цен, сек"
+                hint="Как часто на сервере пересчитываются и обновляются цены"
+              >
+                <NumInput
+                  value={form.price_update_interval_sec}
+                  onChange={(v) => patch("price_update_interval_sec", v)}
+                  disabled={saving}
+                />
+              </FieldRow>
 
               <FieldRow
                 label="Окно анализа продаж"
@@ -391,24 +385,6 @@ export default function AdminPage() {
                   value={form.price_rounding_step}
                   onChange={(v) => patch("price_rounding_step", v)}
                   disabled={saving}
-                />
-              </FieldRow>
-
-              <FieldRow
-                label="Активные каталоги"
-                hint="ID каталогов через запятую, участвующих в рынке"
-              >
-                <input
-                  type="text"
-                  value={form.enabled_catalog_ids}
-                  disabled={saving}
-                  onChange={(e) => patch("enabled_catalog_ids", e.target.value)}
-                  placeholder="id1, id2, id3"
-                  className={cn(
-                    "w-full bg-surface-el border border-border rounded-xl px-3 py-2 text-sm text-white",
-                    "focus:outline-none focus:border-orange/60 transition-colors",
-                    saving && "opacity-50 cursor-not-allowed",
-                  )}
                 />
               </FieldRow>
 
