@@ -10,10 +10,12 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  ScrollText,
 } from "lucide-react";
 import {
   fetchAdminSettings,
   fetchAdminSettingsHistory,
+  postAdminRecalc,
   putAdminSettings,
   type ApiAdminSettings,
   type ApiAdminSettingsHistoryItem,
@@ -157,6 +159,11 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "ok" | "err">("idle");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [recalcLoading, setRecalcLoading] = useState(false);
+  const [recalcOutput, setRecalcOutput] = useState<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadAll = useCallback(async () => {
@@ -207,7 +214,21 @@ export default function AdminPage() {
     }
   }
 
-  //  Render
+  async function handleRecalc() {
+    setRecalcLoading(true);
+    setRecalcOutput(null);
+    try {
+      const text = await postAdminRecalc();
+      setRecalcOutput({ ok: true, text });
+    } catch (e) {
+      setRecalcOutput({
+        ok: false,
+        text: e instanceof Error ? e.message : "Ошибка пересчёта",
+      });
+    } finally {
+      setRecalcLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-full pb-12">
@@ -454,6 +475,39 @@ export default function AdminPage() {
             </div>
           </section>
         )}
+
+        {/* Принудительный пересчёт */}
+        <section className="bg-surface rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+            <ScrollText size={15} className="text-orange shrink-0" />
+            <span className="text-sm font-semibold">Логи</span>
+          </div>
+          <div className="px-5 py-4 space-y-3">
+            <p className="text-[11px] text-muted leading-snug">
+              Принудительный пересчёт цен вне расписания (обычно обновление идёт
+              по интервалу из настроек выше).
+            </p>
+            <Button
+              onClick={handleRecalc}
+              disabled={loading}
+              loading={recalcLoading}
+            >
+              Пересчитать цены сейчас
+            </Button>
+            {recalcOutput && (
+              <pre
+                className={cn(
+                  "text-xs font-mono rounded-xl px-3 py-2.5 whitespace-pre-wrap break-words border",
+                  recalcOutput.ok
+                    ? "bg-surface-el border-border text-muted"
+                    : "bg-danger/10 border-danger/30 text-danger",
+                )}
+              >
+                {recalcOutput.text}
+              </pre>
+            )}
+          </div>
+        </section>
 
         {/* History */}
         <section className="bg-surface rounded-2xl overflow-hidden">

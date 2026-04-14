@@ -37,7 +37,7 @@ export interface ApiSaleRequest extends ApiSaleItem {
 
 export interface ApiSaleBatchRequest {
   items: ApiSaleItem[];
-  sold_at: string;
+  sold_at?: string | null;
   source: string;
 }
 
@@ -188,6 +188,22 @@ export async function fetchAdminSettingsHistory(): Promise<ApiAdminSettingsHisto
   catch { throw new Error('Сервер вернул не JSON'); }
 }
 
+/** Принудительный пересчёт цен вне расписания */
+export async function postAdminRecalc(): Promise<string> {
+  const url = buildApiPath('v1/admin/recalc');
+  const res = await fetch(url, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { Accept: 'text/plain, */*' },
+  });
+  const raw = await res.text();
+  if (!res.ok) {
+    const hint = raw.trim() ? ` — ${raw.slice(0, 300)}` : '';
+    throw new Error(`Ошибка пересчёта: ${res.status}${hint}`);
+  }
+  return raw;
+}
+
 /** Регистрирует одну продажу (POST /api/v1/sales). */
 export async function postSale(payload: ApiSaleRequest): Promise<void> {
   const url = buildApiPath("v1/sales");
@@ -205,7 +221,7 @@ export async function postSale(payload: ApiSaleRequest): Promise<void> {
   }
 }
 
-/** Регистрирует несколько продаж (POST /api/v1/sales/batch). */
+/** Регистрирует несколько продаж  */
 export async function postSaleBatch(
   payload: ApiSaleBatchRequest,
 ): Promise<void> {
