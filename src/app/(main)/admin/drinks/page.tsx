@@ -16,6 +16,7 @@ import {
 import { fetchAdminDrinksList, postAdminDrinkToggleActive, type AdminDrinkRead } from '@/lib/api/admin-drinks';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
+import { AdminMobileBackLink } from '@/components/admin/AdminMobileBackLink';
 
 function Badge({ children, color }: { children: React.ReactNode; color: string }) {
   return (
@@ -93,8 +94,9 @@ export default function AdminDrinksListPage() {
 
   return (
     <div className="min-h-full pb-12">
+      <AdminMobileBackLink />
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-md px-4 lg:px-8 pt-4 lg:pt-8 pb-3 border-b border-border">
+      <div className="sticky top-0 z-20 border-b border-border bg-bg/95 px-3 pt-3 backdrop-blur-md sm:px-4 lg:px-8 lg:pt-8 pb-3">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-xl lg:text-2xl font-bold">Напитки</h1>
@@ -121,7 +123,7 @@ export default function AdminDrinksListPage() {
         </div>
       </div>
 
-      <div className="px-4 lg:px-8 mt-4">
+      <div className="mx-auto mt-4 w-full max-w-3xl px-3 sm:px-4 lg:px-8">
         {error && (
           <div className="flex items-start gap-3 bg-danger/10 border border-danger/30 rounded-2xl p-4 mb-4">
             <AlertCircle size={18} className="text-danger shrink-0 mt-0.5" />

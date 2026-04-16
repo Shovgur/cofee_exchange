@@ -28,6 +28,7 @@ export interface ApiSaleItem {
   pos_item_id: string;
   drink_id: string;
   quantity: number;
+  size_id?: string;
 }
 
 export interface ApiSaleRequest extends ApiSaleItem {
@@ -35,8 +36,18 @@ export interface ApiSaleRequest extends ApiSaleItem {
   source: string;
 }
 
+/**
+ * Строка в POST /api/v1/sales/batch (пакет искусственных / тестовых продаж).
+ */
+export interface ApiSaleBatchItem {
+  pos_item_id: string;
+  size_id: string;
+  drink_id: string;
+  quantity: number;
+}
+
 export interface ApiSaleBatchRequest {
-  items: ApiSaleItem[];
+  items: ApiSaleBatchItem[];
   sold_at?: string | null;
   source: string;
 }

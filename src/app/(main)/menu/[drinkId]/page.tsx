@@ -138,6 +138,7 @@ export default function DrinkPage({ params }: PageProps) {
     if (activeVol.apiDrinkId) {
       postSale({
         pos_item_id: `ce-app-${Date.now()}-${activeVol.apiDrinkId}`,
+        size_id: activeVol.value,
         drink_id: activeVol.apiDrinkId,
         quantity: 1,
         sold_at: soldAt,

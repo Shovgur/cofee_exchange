@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Newspaper, MapPin, Coffee, Ticket, LogIn, User,
-  Globe, Star, LogOut, ChevronRight, SlidersHorizontal, GlassWater,
+  Globe, Star, LogOut, ChevronRight, LayoutGrid,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,8 +23,7 @@ const NAV_ITEMS = [
 ];
 
 const ADMIN_NAV_ITEMS = [
-  { href: '/admin', icon: SlidersHorizontal, label: 'Настройки', exact: true },
-  { href: '/admin/drinks', icon: GlassWater, label: 'Напитки', exact: false },
+  { href: '/admin', icon: LayoutGrid, label: 'Обзор', exact: false },
 ];
 
 const LOYALTY_COLORS: Record<string, string> = {

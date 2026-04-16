@@ -43,6 +43,30 @@
   scrollbar-width: none;
 }
 
+@layer components {
+  /* Единая высота и кастомная стрелка — без смещения нативного chevron в разных браузерах */
+  .form-select {
+    @apply box-border h-11 w-full cursor-pointer rounded-xl border border-border bg-surface pl-3 pr-10 text-sm leading-normal text-white;
+    @apply appearance-none bg-no-repeat transition-colors;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.65rem center;
+    background-size: 1.125rem 1.125rem;
+  }
+
+  .form-select:focus {
+    @apply border-orange/60 outline-none ring-1 ring-orange/35;
+  }
+
+  .form-select:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .form-input {
+    @apply box-border h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm leading-normal text-white;
+    @apply transition-colors focus:border-orange/60 focus:outline-none focus:ring-1 focus:ring-orange/35;
+  }
+}
+
 @layer utilities {
   .safe-pb {
     padding-bottom: max(1.5rem, env(safe-area-inset-bottom));

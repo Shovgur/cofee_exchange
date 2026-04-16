@@ -6,6 +6,7 @@ import { ArrowLeft, Save, AlertCircle, RefreshCw } from 'lucide-react';
 import { createAdminDrink, type AdminDrinkCreate } from '@/lib/api/admin-drinks';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
+import { AdminMobileBackLink } from '@/components/admin/AdminMobileBackLink';
 
 function Field({
   label,
@@ -106,8 +107,9 @@ export default function AdminDrinkNewPage() {
 
   return (
     <div className="min-h-full pb-12">
+      <AdminMobileBackLink />
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-md px-4 lg:px-8 pt-4 lg:pt-8 pb-3 border-b border-border">
+      <div className="sticky top-0 z-20 border-b border-border bg-bg/95 px-3 pt-3 backdrop-blur-md sm:px-4 lg:px-8 lg:pt-8 pb-3">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
@@ -122,7 +124,7 @@ export default function AdminDrinkNewPage() {
         </div>
       </div>
 
-      <div className="px-4 lg:px-8 mt-6 max-w-2xl space-y-4">
+      <div className="mx-auto mt-6 w-full max-w-2xl space-y-4 px-3 sm:px-4 lg:px-8">
         {error && (
           <div className="flex items-start gap-3 bg-danger/10 border border-danger/30 rounded-2xl p-4">
             <AlertCircle size={18} className="text-danger shrink-0 mt-0.5" />
