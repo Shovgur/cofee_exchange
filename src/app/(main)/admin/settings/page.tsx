@@ -43,6 +43,12 @@ function fmt(iso: string) {
   }
 }
 
+function fmtRecalcNum(s: string, fractionDigits = 2): string {
+  const n = parseFloat(s);
+  if (!Number.isFinite(n)) return s;
+  return String(Number(n.toFixed(fractionDigits)));
+}
+
 function settingsToForm(s: ApiAdminSettings): FormState {
   return {
     price_update_interval_sec: String(s.price_update_interval_sec),
@@ -181,26 +187,27 @@ function MarketAvgBand({ data }: { data: ApiAdminRecalcResponse }) {
                 style={{
                   left: `${Math.min(100, Math.max(0, ((avg - low) / span) * 100))}%`,
                 }}
-                title={`Среднее по рынку: ${data.market_avg}`}
+                title={`Среднее по рынку: ${fmtRecalcNum(data.market_avg)}`}
               />
             </div>
             <div className="flex justify-between gap-2 text-[10px] font-mono text-muted">
               <span title="Нижняя граница нейтральной зоны">
-                {data.neutral_band_low}
+                {fmtRecalcNum(data.neutral_band_low)}
               </span>
               <span className="text-orange shrink-0" title="Среднее по рынку">
-                {data.market_avg}
+                {fmtRecalcNum(data.market_avg)}
               </span>
               <span title="Верхняя граница нейтральной зоны">
-                {data.neutral_band_high}
+                {fmtRecalcNum(data.neutral_band_high)}
               </span>
             </div>
           </div>
         ) : (
           <div className="text-xs font-mono text-muted space-y-0.5 rounded-xl border border-border bg-surface-el px-3 py-2">
-            <div>рынок: {data.market_avg}</div>
+            <div>рынок: {fmtRecalcNum(data.market_avg)}</div>
             <div>
-              полоса: {data.neutral_band_low} … {data.neutral_band_high}
+              полоса: {fmtRecalcNum(data.neutral_band_low)} …{" "}
+              {fmtRecalcNum(data.neutral_band_high)}
             </div>
           </div>
         )}
