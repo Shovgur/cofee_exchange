@@ -17,6 +17,7 @@ import {
   fetchAdminSettingsHistory,
   postAdminRecalc,
   putAdminSettings,
+  type ApiAdminRecalcResponse,
   type ApiAdminSettings,
   type ApiAdminSettingsHistoryItem,
   type ApiAdminSettingsUpdate,
@@ -50,7 +51,6 @@ function settingsToForm(s: ApiAdminSettings): FormState {
     max_step_up_pct: s.max_step_up_pct,
     max_step_down_pct: s.max_step_down_pct,
     max_step_to_center_pct: s.max_step_to_center_pct,
-    center_return_full_distance_pct: s.center_return_full_distance_pct,
     default_sensitivity: s.default_sensitivity,
     default_min_pct: s.default_min_pct,
     default_max_pct: s.default_max_pct,
@@ -67,8 +67,6 @@ function formToPayload(f: FormState): ApiAdminSettingsUpdate {
     max_step_up_pct: parseFloat(f.max_step_up_pct) || 0,
     max_step_down_pct: parseFloat(f.max_step_down_pct) || 0,
     max_step_to_center_pct: parseFloat(f.max_step_to_center_pct) || 0,
-    center_return_full_distance_pct:
-      parseFloat(f.center_return_full_distance_pct) || 0,
     default_sensitivity: parseFloat(f.default_sensitivity) || 0,
     default_min_pct: parseFloat(f.default_min_pct) || 0,
     default_max_pct: parseFloat(f.default_max_pct) || 0,
@@ -86,7 +84,6 @@ interface FormState {
   max_step_up_pct: string;
   max_step_down_pct: string;
   max_step_to_center_pct: string;
-  center_return_full_distance_pct: string;
   default_sensitivity: string;
   default_min_pct: string;
   default_max_pct: string;
@@ -150,6 +147,68 @@ function NumInput({
   );
 }
 
+function MarketAvgBand({ data }: { data: ApiAdminRecalcResponse }) {
+  const low = parseFloat(data.neutral_band_low);
+  const high = parseFloat(data.neutral_band_high);
+  const avg = parseFloat(data.market_avg);
+  const span = high - low;
+  const valid =
+    Number.isFinite(low) &&
+    Number.isFinite(high) &&
+    Number.isFinite(avg) &&
+    Number.isFinite(span) &&
+    span > 0;
+
+  return (
+    <div className="space-y-2 pt-1">
+      <p className="text-xs text-muted">
+        Пересчитано позиций:{" "}
+        <span className="font-mono text-white">{data.recalculated}</span>
+      </p>
+      <div>
+        <p className="text-[11px] text-muted mb-1.5">
+          Нейтральная полоса и средний «рынок»
+        </p>
+        {valid ? (
+          <div className="space-y-1">
+            <div className="relative h-7 rounded-xl bg-surface-el border border-border overflow-hidden">
+              <div
+                className="absolute inset-0 bg-gradient-to-r from-orange/5 via-orange/15 to-orange/5"
+                title="Нейтральный коридор"
+              />
+              <div
+                className="absolute top-0 bottom-0 w-0.5 -translate-x-1/2 rounded-full bg-orange shadow-[0_0_10px_rgba(255,140,0,0.45)]"
+                style={{
+                  left: `${Math.min(100, Math.max(0, ((avg - low) / span) * 100))}%`,
+                }}
+                title={`Среднее по рынку: ${data.market_avg}`}
+              />
+            </div>
+            <div className="flex justify-between gap-2 text-[10px] font-mono text-muted">
+              <span title="Нижняя граница нейтральной зоны">
+                {data.neutral_band_low}
+              </span>
+              <span className="text-orange shrink-0" title="Среднее по рынку">
+                {data.market_avg}
+              </span>
+              <span title="Верхняя граница нейтральной зоны">
+                {data.neutral_band_high}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="text-xs font-mono text-muted space-y-0.5 rounded-xl border border-border bg-surface-el px-3 py-2">
+            <div>рынок: {data.market_avg}</div>
+            <div>
+              полоса: {data.neutral_band_low} … {data.neutral_band_high}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 //  Page
 
 export default function AdminPage() {
@@ -161,10 +220,11 @@ export default function AdminPage() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "ok" | "err">("idle");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [recalcLoading, setRecalcLoading] = useState(false);
-  const [recalcOutput, setRecalcOutput] = useState<{
-    ok: boolean;
-    text: string;
-  } | null>(null);
+  const [recalcOutput, setRecalcOutput] = useState<
+    | { ok: true; data: ApiAdminRecalcResponse }
+    | { ok: false; text: string }
+    | null
+  >(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadAll = useCallback(async () => {
@@ -219,8 +279,8 @@ export default function AdminPage() {
     setRecalcLoading(true);
     setRecalcOutput(null);
     try {
-      const text = await postAdminRecalc();
-      setRecalcOutput({ ok: true, text });
+      const data = await postAdminRecalc();
+      setRecalcOutput({ ok: true, data });
     } catch (e) {
       setRecalcOutput({
         ok: false,
@@ -313,8 +373,8 @@ export default function AdminPage() {
               </FieldRow>
 
               <FieldRow
-                label="Нейтральная зона (%)"
-                hint="Диапазон изменения цены, при котором цена считается стабильной"
+                label="Нейтральная зона, %"
+                hint="Доля напитков в нейтральной зоне (без сильного сдвига цены к верху или низу)"
               >
                 <NumInput
                   value={form.neutral_zone_percent}
@@ -352,17 +412,6 @@ export default function AdminPage() {
                 <NumInput
                   value={form.max_step_to_center_pct}
                   onChange={(v) => patch("max_step_to_center_pct", v)}
-                  disabled={saving}
-                />
-              </FieldRow>
-
-              <FieldRow
-                label="Полное расстояние возврата (%)"
-                hint="Дистанция, при которой возврат к центру считается полным"
-              >
-                <NumInput
-                  value={form.center_return_full_distance_pct}
-                  onChange={(v) => patch("center_return_full_distance_pct", v)}
                   disabled={saving}
                 />
               </FieldRow>
@@ -496,18 +545,16 @@ export default function AdminPage() {
             >
               Пересчитать цены сейчас
             </Button>
-            {recalcOutput && (
-              <pre
-                className={cn(
-                  "text-xs font-mono rounded-xl px-3 py-2.5 whitespace-pre-wrap break-words border",
-                  recalcOutput.ok
-                    ? "bg-surface-el border-border text-muted"
-                    : "bg-danger/10 border-danger/30 text-danger",
-                )}
-              >
-                {recalcOutput.text}
-              </pre>
-            )}
+            {recalcOutput &&
+              (recalcOutput.ok ? (
+                <div className="rounded-xl border border-border bg-surface-el px-3 py-2.5">
+                  <MarketAvgBand data={recalcOutput.data} />
+                </div>
+              ) : (
+                <pre className="text-xs font-mono rounded-xl px-3 py-2.5 whitespace-pre-wrap break-words border bg-danger/10 border-danger/30 text-danger">
+                  {recalcOutput.text}
+                </pre>
+              ))}
           </div>
         </section>
 

@@ -137,7 +137,6 @@ export interface ApiAdminSettings {
   max_step_up_pct: string;
   max_step_down_pct: string;
   max_step_to_center_pct: string;
-  center_return_full_distance_pct: string;
   default_sensitivity: string;
   default_min_pct: string;
   default_max_pct: string;
@@ -154,7 +153,6 @@ export interface ApiAdminSettingsUpdate {
   max_step_up_pct: number;
   max_step_down_pct: number;
   max_step_to_center_pct: number;
-  center_return_full_distance_pct: number;
   default_sensitivity: number;
   default_min_pct: number;
   default_max_pct: number;
@@ -199,20 +197,32 @@ export async function fetchAdminSettingsHistory(): Promise<ApiAdminSettingsHisto
   catch { throw new Error('Сервер вернул не JSON'); }
 }
 
+/** Ответ POST /api/v1/admin/recalc */
+export interface ApiAdminRecalcResponse {
+  recalculated: number;
+  market_avg: string;
+  neutral_band_low: string;
+  neutral_band_high: string;
+}
+
 /** Принудительный пересчёт цен вне расписания */
-export async function postAdminRecalc(): Promise<string> {
-  const url = buildApiPath('v1/admin/recalc');
+export async function postAdminRecalc(): Promise<ApiAdminRecalcResponse> {
+  const url = buildApiPath("v1/admin/recalc");
   const res = await fetch(url, {
-    method: 'POST',
-    cache: 'no-store',
-    headers: { Accept: 'text/plain, */*' },
+    method: "POST",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
   });
   const raw = await res.text();
   if (!res.ok) {
-    const hint = raw.trim() ? ` — ${raw.slice(0, 300)}` : '';
+    const hint = raw.trim() ? ` — ${raw.slice(0, 300)}` : "";
     throw new Error(`Ошибка пересчёта: ${res.status}${hint}`);
   }
-  return raw;
+  try {
+    return JSON.parse(raw) as ApiAdminRecalcResponse;
+  } catch {
+    throw new Error("Сервер вернул не JSON");
+  }
 }
 
 /** Регистрирует одну продажу (POST /api/v1/sales). */
