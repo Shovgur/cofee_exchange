@@ -4,14 +4,11 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Newspaper, MapPin, Coffee, Ticket, LogIn, User,
-  Globe, Star, LogOut, ChevronRight, LayoutGrid,
+  Star, LogOut, LayoutGrid,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCountry } from '@/contexts/CountryContext';
-import { usePrices } from '@/contexts/PricesContext';
 import { useState } from 'react';
-import CountrySelector from '@/components/country/CountrySelector';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 
@@ -37,9 +34,7 @@ export default function DesktopSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { country } = useCountry();
 
-  const [showCountry, setShowCountry] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
 
   return (
@@ -126,22 +121,8 @@ export default function DesktopSidebar() {
           })}
         </div>
 
-        {/* Bottom: profile / auth + country */}
+        {/* Bottom: profile / auth */}
         <div className="px-3 pb-6 space-y-2 border-t border-border pt-4">
-          {/* Country switcher */}
-          <button
-            onClick={() => setShowCountry(true)}
-            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-surface-el transition-colors"
-          >
-            <div className="flex items-center gap-2.5">
-              <Globe size={16} className="text-muted flex-shrink-0" />
-              <span className="text-sm text-muted">
-                {country.flag} {country.name}
-              </span>
-            </div>
-            <ChevronRight size={14} className="text-muted" />
-          </button>
-
           {user ? (
             <>
               {/* Profile link */}
@@ -186,9 +167,6 @@ export default function DesktopSidebar() {
           )}
         </div>
       </aside>
-
-      {/* Country selector */}
-      <CountrySelector open={showCountry} onClose={() => setShowCountry(false)} />
 
       {/* Logout confirm */}
       <Modal open={showLogout} onClose={() => setShowLogout(false)} title="Выход из аккаунта">

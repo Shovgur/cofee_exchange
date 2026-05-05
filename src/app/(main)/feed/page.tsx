@@ -7,9 +7,8 @@ import { useCountry } from '@/contexts/CountryContext';
 import { getFeedByCountry, getIpoDrinkById } from '@/lib/mock-data';
 import { cn, feedTypeLabel, feedTypeColor, formatDate, formatIpoCountdown } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
-import CountrySelector from '@/components/country/CountrySelector';
 import type { FeedItem, FeedItemType, FeedLink, IpoDrink } from '@/types';
-import { ChevronRight, Globe, Rocket, Clock } from 'lucide-react';
+import { ChevronRight, Rocket, Clock } from 'lucide-react';
 
 const FILTERS: { value: 'all' | FeedItemType; label: string }[] = [
   { value: 'all',       label: 'Все' },
@@ -143,7 +142,6 @@ export default function FeedPage() {
   const { country } = useCountry();
   const router = useRouter();
   const [filter, setFilter] = useState<'all' | FeedItemType>('all');
-  const [showCountrySelector, setShowCountrySelector] = useState(false);
 
   const allItems = getFeedByCountry(country.id);
   const items = allItems.filter(
@@ -167,13 +165,6 @@ export default function FeedPage() {
             <h1 className="text-xl lg:text-3xl font-bold">Лента</h1>
             <p className="text-xs lg:text-sm text-muted mt-0.5">Новости, акции и события</p>
           </div>
-          <button
-            onClick={() => setShowCountrySelector(true)}
-            className="lg:hidden flex items-center gap-1.5 bg-surface-el px-3 py-2 rounded-xl hover:bg-surface-ov transition-colors"
-          >
-            <Globe size={14} className="text-muted" />
-            <span className="text-sm font-medium">{country.flag} {country.name}</span>
-          </button>
         </div>
 
         {/* Filter chips */}
@@ -217,10 +208,6 @@ export default function FeedPage() {
         </div>
       </div>
 
-      <CountrySelector
-        open={showCountrySelector}
-        onClose={() => setShowCountrySelector(false)}
-      />
     </div>
   );
 }

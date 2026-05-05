@@ -130,6 +130,10 @@ export function getShopsByCountry(countryId: string): CoffeeShop[] {
   return COFFEE_SHOPS.filter((s) => s.countryId === countryId);
 }
 
+export function getAllShops(): CoffeeShop[] {
+  return COFFEE_SHOPS;
+}
+
 export function isShopOpen(shop: CoffeeShop): boolean {
   const now = new Date();
   const hours = now.getHours();

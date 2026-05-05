@@ -30,8 +30,8 @@ export default function Modal({ open, onClose, title, children, className }: Pro
     <div
       className={cn(
         'fixed inset-0 z-[10060] flex justify-center',
-        /* mobile: bottom sheet */
-        'items-end p-0',
+        /* mobile: bottom sheet — sits above the bottom nav */
+        'items-end px-0 pb-nav-safe',
         /* desktop: centered dialog */
         'lg:items-center lg:p-4',
       )}

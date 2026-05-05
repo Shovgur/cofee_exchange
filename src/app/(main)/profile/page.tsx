@@ -6,7 +6,6 @@ import {
   User,
   Bell,
   CreditCard,
-  ShoppingBag,
   Settings,
   HelpCircle,
   Info,
@@ -15,6 +14,7 @@ import {
   Star,
   Globe,
   Shield,
+  Trophy,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
@@ -181,6 +181,13 @@ export default function ProfilePage() {
                 {
                   icon: Shield,
                   label: 'Безопасность',
+                  onClick: () => {},
+                  badge: 'Скоро',
+                  disabled: true,
+                },
+                {
+                  icon: Trophy,
+                  label: 'Достижения',
                   onClick: () => {},
                   badge: 'Скоро',
                   disabled: true,

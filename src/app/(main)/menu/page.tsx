@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { TrendingUp, TrendingDown, Minus, Lock } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Lock,
+  ChevronRight,
+} from "lucide-react";
 import { useCountry } from "@/contexts/CountryContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePrices } from "@/contexts/PricesContext";
@@ -205,6 +211,31 @@ export default function MenuPage() {
 
   return (
     <div className="min-h-full">
+      <div
+        className="lg:hidden fixed inset-x-0 z-[10040] px-3"
+        style={{ bottom: "calc(3.75rem + env(safe-area-inset-bottom, 0px))" }}
+      >
+        <div
+          className="flex items-center justify-between gap-3 bg-[#1c1008] border border-orange/30 rounded-2xl px-4 py-3 shadow-lg opacity-60 cursor-not-allowed"
+          style={{ boxShadow: "0 0 20px rgba(251,100,21,0.10)" }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-orange/15 flex items-center justify-center flex-shrink-0">
+              <Lock size={18} className="text-orange" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-semibold text-sm leading-tight">
+                Secret Menu
+              </div>
+              <div className="text-xs text-muted mt-0.5">Только за Бины</div>
+            </div>
+          </div>
+          <div className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-surface-el">
+            <span className="text-xs text-muted font-medium">Скоро</span>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-md pt-4 pb-2 px-4 lg:px-8 lg:pt-8">
         <div className="flex items-center justify-between mb-3 gap-3">
@@ -275,6 +306,13 @@ export default function MenuPage() {
             </section>
           ))}
       </div>
+
+      {/* Spacer so last items are not hidden behind the Secret Menu banner on mobile */}
+      <div
+        className="lg:hidden"
+        style={{ height: "calc(4rem + env(safe-area-inset-bottom, 0px))" }}
+        aria-hidden
+      />
     </div>
   );
 }
