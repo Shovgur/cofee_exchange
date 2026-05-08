@@ -1,3 +1,4 @@
+export * from './drink-addons';
 export * from './countries';
 export * from './menu';
 export * from './feed';

@@ -13,8 +13,10 @@ import {
 import { useCountry } from "@/contexts/CountryContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePrices } from "@/contexts/PricesContext";
-import { cn, formatPriceChange } from "@/lib/utils";
+import { cn, formatPriceChange, formatPrice } from "@/lib/utils";
 import type { Drink, DrinkCategory, PriceTrend, VolumePrice } from "@/types";
+import { mockBeansForDrinkPrice } from "@/lib/mock-data/drink-addons";
+import CoffeeBeanIcon from "@/components/ui/CoffeeBeanIcon";
 
 const ALL_TABS: {
   value: DrinkCategory | "all";
@@ -50,13 +52,16 @@ function TrendArrow({ trend }: { trend: PriceTrend }) {
 
 function VolumeCol({
   vol,
+  currencySymbol,
   flashing,
   flashGen,
 }: {
   vol: VolumePrice;
+  currencySymbol: string;
   flashing: boolean;
   flashGen: number;
 }) {
+  const beans = mockBeansForDrinkPrice(vol.price);
   const flashClass =
     vol.trend === "up"
       ? "price-flash-up"
@@ -73,9 +78,15 @@ function VolumeCol({
       )}
     >
       <span className="text-[10px] text-muted mb-0.5">{vol.label}</span>
-      <span className="text-sm font-bold leading-tight">
-        {Math.round(vol.price)} ₽
-      </span>
+      <div className="flex flex-col items-center gap-0.5">
+        <span className="text-sm font-bold leading-tight">
+          {formatPrice(vol.price, currencySymbol)}
+        </span>
+        <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums text-amber-400/95">
+          {beans}
+          <CoffeeBeanIcon size={12} className="shrink-0 opacity-95" />
+        </span>
+      </div>
       <div
         className={cn(
           "flex items-center gap-0.5 mt-0.5 text-[10px] font-medium",
@@ -96,11 +107,13 @@ function VolumeCol({
 function DrinkTile({
   drink,
   isLocked,
+  currencySymbol,
   flashTrend,
   flashGen,
 }: {
   drink: Drink;
   isLocked: boolean;
+  currencySymbol: string;
   flashTrend: PriceTrend | undefined;
   flashGen: number;
 }) {
@@ -159,6 +172,7 @@ function DrinkTile({
           <VolumeCol
             key={flashTrend ? `${vol.value}-${flashGen}` : vol.value}
             vol={vol}
+            currencySymbol={currencySymbol}
             flashing={!!flashTrend}
             flashGen={flashGen}
           />
@@ -212,8 +226,10 @@ export default function MenuPage() {
   return (
     <div className="min-h-full">
       <div
-        className="lg:hidden fixed inset-x-0 z-[10040] px-3"
-        style={{ bottom: "calc(3.75rem + env(safe-area-inset-bottom, 0px))" }}
+        className="lg:hidden fixed inset-x-0 z-[10040] px-3 pb-1"
+        style={{
+          bottom: "calc(3.75rem + 0.875rem + env(safe-area-inset-bottom, 0px))",
+        }}
       >
         <div
           className="flex items-center justify-between gap-3 bg-[#1c1008] border border-orange/30 rounded-2xl px-4 py-3 shadow-lg opacity-60 cursor-not-allowed"
@@ -298,6 +314,7 @@ export default function MenuPage() {
                     key={drink.id}
                     drink={drink}
                     isLocked={!user}
+                    currencySymbol={country.currencySymbol}
                     flashTrend={flashMap.get(drink.id)}
                     flashGen={flashGen}
                   />
@@ -310,7 +327,9 @@ export default function MenuPage() {
       {/* Spacer so last items are not hidden behind the Secret Menu banner on mobile */}
       <div
         className="lg:hidden"
-        style={{ height: "calc(4rem + env(safe-area-inset-bottom, 0px))" }}
+        style={{
+          height: "calc(4.875rem + env(safe-area-inset-bottom, 0px))",
+        }}
         aria-hidden
       />
     </div>

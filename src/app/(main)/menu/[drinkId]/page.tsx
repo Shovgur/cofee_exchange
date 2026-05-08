@@ -11,7 +11,6 @@ import {
   Bell,
   ShoppingCart,
   AlertCircle,
-  Check,
 } from "lucide-react";
 import { useCountry } from "@/contexts/CountryContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,15 +22,24 @@ import {
 } from "@/lib/api/menu";
 import { formatPrice, formatPriceChange, trendBg, cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
-import Modal from "@/components/ui/Modal";
 import AuthGate from "@/components/auth/AuthGate";
+import DrinkAddonsSheet from "@/components/menu/DrinkAddonsSheet";
+import CoffeeBeanIcon from "@/components/ui/CoffeeBeanIcon";
 import dynamic from "next/dynamic";
 import type { Coupon, PriceTrend, VolumePrice } from "@/types";
+import { mockBeansForDrinkPrice } from "@/lib/mock-data/drink-addons";
 
 const PriceChart = dynamic(() => import("@/components/menu/PriceChart"), {
   ssr: false,
   loading: () => (
     <div className="h-[220px] bg-surface-el animate-pulse rounded-2xl" />
+  ),
+});
+
+const DrinkHero3D = dynamic(() => import("@/components/menu/DrinkHero3D"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-52 min-h-[13rem] w-full animate-pulse bg-surface-el" />
   ),
 });
 
@@ -57,7 +65,7 @@ export default function DrinkPage({ params }: PageProps) {
   const [selectedVolume, setSelectedVolume] = useState<VolumePrice | null>(
     null,
   );
-  const [showBuy, setShowBuy] = useState(false);
+  const [showAddons, setShowAddons] = useState(false);
   const [buying, setBuying] = useState(false);
   const [bought, setBought] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(false);
@@ -91,7 +99,7 @@ export default function DrinkPage({ params }: PageProps) {
         </div>
         <div className="px-4 space-y-4">
           <div className="bg-surface rounded-3xl overflow-hidden">
-            <div className="h-48 bg-surface-el" />
+            <div className="h-52 min-h-[13rem] bg-surface-el" />
             <div className="p-5 space-y-4">
               <div className="h-5 bg-surface-el rounded w-1/2" />
               <div className="h-4 bg-surface-el rounded w-3/4" />
@@ -130,7 +138,13 @@ export default function DrinkPage({ params }: PageProps) {
         ? TrendingDown
         : Minus;
 
-  async function handlePurchase() {
+  const drinkBeans = mockBeansForDrinkPrice(activeVol.price);
+
+  async function confirmPurchase(payload: {
+    totalRub: number;
+    totalBeans: number;
+    labels: string[];
+  }) {
     if (!user || !drink) return;
     setBuying(true);
     const soldAt = new Date().toISOString();
@@ -152,25 +166,28 @@ export default function DrinkPage({ params }: PageProps) {
       const expiresAt = new Date(
         Date.now() + 7 * 24 * 60 * 60 * 1000,
       ).toISOString();
+      const extras = payload.labels.length ? payload.labels.join(", ") : "";
       const couponData: Omit<Coupon, "id"> = {
         drinkId: drink.id,
         drinkName: drink.name,
         category: drink.category,
-        purchasePrice: activeVol.price,
+        purchasePrice: payload.totalRub,
         currency: country.currency,
         currencySymbol: country.currencySymbol,
         purchasedAt: soldAt,
         expiresAt,
         status: "active",
-        qrData: `CE:${drink.id}:${activeVol.price}:${activeVol.value}:${country.id}:${Date.now()}`,
+        qrData: `CE:${drink.id}:${payload.totalRub}:${activeVol.value}:${country.id}:${Date.now()}:${payload.totalBeans}:${extras}`,
         countryId: country.id,
-        volumeLabel: activeVol.label,
+        volumeLabel: extras
+          ? `${activeVol.label} (${extras})`
+          : activeVol.label,
       };
       addCoupon(couponData);
       setBuying(false);
       setBought(true);
       setTimeout(() => {
-        setShowBuy(false);
+        setShowAddons(false);
         setBought(false);
         router.push("/coupons");
       }, 1500);
@@ -219,21 +236,10 @@ export default function DrinkPage({ params }: PageProps) {
             )}
             key={`hero-${animKey}`}
           >
-            {drink.photoUrl && (
-              <div className="relative h-48 w-full">
-                <Image
-                  src={drink.photoUrl}
-                  alt={drink.name}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                  sizes="512px"
-                />
-              </div>
-            )}
+            <DrinkHero3D drink={drink} />
             <div className="p-5">
-              <div className="flex items-start justify-between mb-4">
-                <div>
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div className="min-w-0 flex-1 pr-1">
                   <h1 className="text-xl font-bold leading-tight">
                     {drink.name}
                   </h1>
@@ -241,11 +247,12 @@ export default function DrinkPage({ params }: PageProps) {
                     {drink.description}
                   </p>
                 </div>
-                <div className="text-right shrink-0 ml-4">
-                  <div className="text-2xl font-bold rounded-lg px-1">
+                <div className="flex shrink-0 flex-col items-end gap-3">
+                  <div className="flex flex-nowrap items-baseline justify-end gap-x-4">
                     <span
-                      key={`price-${animKey}`}
+                      key={`price-rub-${animKey}`}
                       className={cn(
+                        "text-2xl font-bold leading-none tracking-tight whitespace-nowrap text-white",
                         animTrend === "up" && animKey > 0
                           ? "dp-price-up"
                           : animTrend === "down" && animKey > 0
@@ -257,11 +264,15 @@ export default function DrinkPage({ params }: PageProps) {
                     >
                       {formatPrice(activeVol.price, country.currencySymbol)}
                     </span>
+                    <span className="inline-flex shrink-0 items-center gap-1.5 pl-0.5 text-lg font-semibold tabular-nums text-amber-400/95">
+                      {drinkBeans}
+                      <CoffeeBeanIcon size={17} className="shrink-0 -translate-y-px" />
+                    </span>
                   </div>
                   <div
                     key={`pct-${animKey}`}
                     className={cn(
-                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium mt-1",
+                      "inline-flex shrink-0 items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium",
                       trendBg(activeVol.trend),
                       animKey > 0 ? "dp-pct-in" : "",
                     )}
@@ -273,8 +284,8 @@ export default function DrinkPage({ params }: PageProps) {
               </div>
 
               {/* Volume selector */}
-              <div className="mb-4">
-                <p className="text-xs text-muted mb-2">Объём</p>
+              <div className="mb-4 pt-0.5">
+                <p className="text-xs text-muted mb-2.5">Объём</p>
                 <div className="flex gap-2">
                   {drink.volumes.map((v) => (
                     <button
@@ -374,111 +385,42 @@ export default function DrinkPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Buy button */}
-          <Button fullWidth size="lg" onClick={() => setShowBuy(true)}>
+          {/* Buy */}
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => {
+              setBought(false);
+              setShowAddons(true);
+            }}
+          >
             <ShoppingCart size={18} />
-            Купить {activeVol.label} за{" "}
-            {formatPrice(activeVol.price, country.currencySymbol)}
+            <span className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+              <span>
+                Купить {activeVol.label} за{" "}
+                {formatPrice(activeVol.price, country.currencySymbol)}
+              </span>
+              <span className="inline-flex items-center gap-1 font-semibold tabular-nums opacity-95">
+                {drinkBeans}
+                <CoffeeBeanIcon size={16} className="shrink-0" />
+              </span>
+            </span>
           </Button>
         </div>
       </div>
 
-      <Modal
-        open={showBuy}
-        onClose={() => !buying && setShowBuy(false)}
-        title="Подтверждение покупки"
-      >
-        {bought ? (
-          <div className="flex flex-col items-center gap-4 py-6">
-            <div className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center">
-              <Check size={32} className="text-success" />
-            </div>
-            <p className="font-semibold text-lg">Куплено!</p>
-            <p className="text-muted text-sm text-center">
-              Купон добавлен в раздел Купоны
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            <div className="bg-surface-el rounded-2xl p-4 flex items-center gap-4">
-              {drink.photoUrl ? (
-                <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0">
-                  <Image
-                    src={drink.photoUrl}
-                    alt={drink.name}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                    sizes="48px"
-                  />
-                </div>
-              ) : (
-                <span className="text-3xl shrink-0">
-                  {drink.category === "coffee"
-                    ? "☕"
-                    : drink.category === "lemonade"
-                      ? "🍋"
-                      : "🍵"}
-                </span>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate">{drink.name}</div>
-                <div className="text-sm text-muted">{activeVol.label}</div>
-              </div>
-              <div className="text-xl font-bold shrink-0">
-                {formatPrice(activeVol.price, country.currencySymbol)}
-              </div>
-            </div>
-
-            <div>
-              <p className="text-sm text-muted mb-3">Способ оплаты</p>
-              <div className="grid grid-cols-2 gap-2">
-                {["Карта", "Apple Pay", "Google Pay", "СБП"].map((method) => (
-                  <div
-                    key={method}
-                    className="bg-surface-el rounded-xl px-4 py-3 text-sm text-muted text-center border border-border relative overflow-hidden"
-                  >
-                    {method}
-                    <span className="absolute top-1 right-1 text-[9px] bg-surface-ov px-1.5 py-0.5 rounded-full text-muted">
-                      Скоро
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-muted mt-2 text-center">
-                Оплата через приложение в разработке
-              </p>
-            </div>
-
-            <div className="border-t border-border pt-4">
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-muted">Напиток</span>
-                <span>
-                  {formatPrice(activeVol.price, country.currencySymbol)}
-                </span>
-              </div>
-              <div className="flex justify-between font-semibold text-base">
-                <span>Итого</span>
-                <span className="text-orange">
-                  {formatPrice(activeVol.price, country.currencySymbol)}
-                </span>
-              </div>
-            </div>
-
-            <Button
-              fullWidth
-              size="lg"
-              onClick={handlePurchase}
-              loading={buying}
-            >
-              {buying ? "Оформляем…" : "Подтвердить (демо)"}
-            </Button>
-            <p className="text-xs text-muted text-center -mt-2">
-              Это демо — купон будет создан без реальной оплаты
-            </p>
-          </div>
-        )}
-      </Modal>
+      <DrinkAddonsSheet
+        open={showAddons}
+        onClose={() => !buying && !bought && setShowAddons(false)}
+        drinkName={drink.name}
+        volumeLabel={activeVol.label}
+        basePriceRub={activeVol.price}
+        baseBeans={drinkBeans}
+        currencySymbol={country.currencySymbol}
+        onConfirm={confirmPurchase}
+        confirming={buying}
+        bought={bought}
+      />
     </AuthGate>
   );
 }
