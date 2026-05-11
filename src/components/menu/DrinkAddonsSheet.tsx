@@ -8,6 +8,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import {
   DRINK_ADDON_GROUPS,
   type DrinkAddonGroup,
+  type DrinkAddonNutrition,
 } from '@/lib/mock-data/drink-addons';
 import Button from '@/components/ui/Button';
 import CoffeeBeanIcon from '@/components/ui/CoffeeBeanIcon';
@@ -21,11 +22,9 @@ function BeanAmount({
   beans: number;
   iconSize?: number;
   className?: string;
-  /** префикс «+» только для допов; для итого — просто число */
   positivePrefix?: boolean;
 }) {
-  const text =
-    positivePrefix && beans > 0 ? `+${beans}` : `${beans}`;
+  const text = positivePrefix && beans > 0 ? `+${beans}` : `${beans}`;
   return (
     <span
       className={cn(
@@ -64,6 +63,47 @@ function optionById(group: DrinkAddonGroup, id: string) {
   return group.options.find((o) => o.id === id);
 }
 
+function sumNutrition(sel: {
+  singleSel: Record<string, string>;
+  multiSel: Set<string>;
+}): DrinkAddonNutrition {
+  let calories = 0;
+  let proteins = 0;
+  let fats = 0;
+  let carbs = 0;
+  for (const g of DRINK_ADDON_GROUPS) {
+    if (g.type === 'single') {
+      const o = optionById(g, sel.singleSel[g.id] ?? '');
+      const n = o?.nutrition;
+      if (n) {
+        calories += n.calories;
+        proteins += n.proteins;
+        fats += n.fats;
+        carbs += n.carbs;
+      }
+    } else {
+      for (const o of g.options) {
+        if (!sel.multiSel.has(o.id)) continue;
+        const n = o.nutrition;
+        if (n) {
+          calories += n.calories;
+          proteins += n.proteins;
+          fats += n.fats;
+          carbs += n.carbs;
+        }
+      }
+    }
+  }
+  return { calories, proteins, fats, carbs };
+}
+
+export interface DrinkNutritionBase {
+  calories: number;
+  proteins: number;
+  fats: number;
+  carbs: number;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -72,10 +112,12 @@ interface Props {
   basePriceRub: number;
   baseBeans: number;
   currencySymbol: string;
+  drinkNutrition: DrinkNutritionBase;
   onConfirm: (payload: {
     totalRub: number;
     totalBeans: number;
     labels: string[];
+    paymentMethod: 'card' | 'beans';
   }) => void;
   confirming: boolean;
   bought: boolean;
@@ -89,6 +131,7 @@ export default function DrinkAddonsSheet({
   basePriceRub,
   baseBeans,
   currencySymbol,
+  drinkNutrition,
   onConfirm,
   confirming,
   bought,
@@ -96,6 +139,7 @@ export default function DrinkAddonsSheet({
   const [mounted, setMounted] = useState(false);
   const [singleSel, setSingleSel] = useState<Record<string, string>>(defaultSingleSelection);
   const [multiSel, setMultiSel] = useState<Set<string>>(defaultMultiSelection);
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'beans'>('card');
 
   useEffect(() => setMounted(true), []);
 
@@ -103,6 +147,7 @@ export default function DrinkAddonsSheet({
     if (!open) return;
     setSingleSel(defaultSingleSelection());
     setMultiSel(defaultMultiSelection());
+    setPaymentMethod('card');
   }, [open]);
 
   useEffect(() => {
@@ -140,6 +185,20 @@ export default function DrinkAddonsSheet({
     }
     return { addonRub: ar, addonBeans: ab, labels: ls };
   }, [singleSel, multiSel]);
+
+  const addonNutrition = useMemo(
+    () => sumNutrition({ singleSel, multiSel }),
+    [singleSel, multiSel],
+  );
+
+  const totalNutrition = useMemo(() => {
+    return {
+      calories: drinkNutrition.calories + addonNutrition.calories,
+      proteins: drinkNutrition.proteins + addonNutrition.proteins,
+      fats: drinkNutrition.fats + addonNutrition.fats,
+      carbs: drinkNutrition.carbs + addonNutrition.carbs,
+    };
+  }, [drinkNutrition, addonNutrition]);
 
   const totalRub = basePriceRub + addonRub;
   const totalBeans = baseBeans + addonBeans;
@@ -194,10 +253,10 @@ export default function DrinkAddonsSheet({
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4">
               <div className="min-w-0">
                 <h2 id="addons-sheet-title" className="text-lg font-semibold leading-tight">
-                  Допы к заказу
+                  Настрой свой напиток
                 </h2>
                 <p className="mt-0.5 truncate text-sm text-muted">
-                  {drinkName} · {volumeLabel}
+                  {drinkName} · {volumeLabel} мл
                 </p>
               </div>
               <button
@@ -281,18 +340,69 @@ export default function DrinkAddonsSheet({
                       </div>
                     </motion.section>
                   ))}
-
-                  <div className="rounded-2xl border border-dashed border-border bg-bg/50 px-4 py-3 text-center text-xs text-muted">
-                    Оплата в приложении в разработке — это демо-заказ без списания
-                  </div>
                 </div>
               )}
             </div>
 
             {!bought && (
-              <div
-                className="shrink-0 border-t border-border bg-surface px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]"
-              >
+              <div className="shrink-0 border-t border-border bg-surface px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]">
+                <div className="mb-4 rounded-2xl bg-surface-el p-4">
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                    КБЖУ на порцию
+                  </h3>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { label: 'Кал.', value: `${Math.round(totalNutrition.calories)}` },
+                      { label: 'Белки', value: `${totalNutrition.proteins.toFixed(1)}г` },
+                      { label: 'Жиры', value: `${totalNutrition.fats.toFixed(1)}г` },
+                      { label: 'Углев.', value: `${totalNutrition.carbs.toFixed(1)}г` },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="rounded-xl bg-bg/80 py-2 text-center">
+                        <div className="text-[10px] text-muted">{label}</div>
+                        <div className="text-xs font-semibold tabular-nums">{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <p className="mb-2 text-xs font-semibold text-muted">Способ оплаты</p>
+                <div className="mb-4 space-y-2">
+                  <label
+                    className={cn(
+                      'flex cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 transition-colors',
+                      paymentMethod === 'card'
+                        ? 'border-orange/40 bg-orange/10'
+                        : 'border-border bg-surface-el',
+                    )}
+                  >
+                    <span className="text-sm font-medium">Оплатить картой</span>
+                    <input
+                      type="radio"
+                      name="pay-method"
+                      className="accent-orange"
+                      checked={paymentMethod === 'card'}
+                      onChange={() => setPaymentMethod('card')}
+                    />
+                  </label>
+                  <label
+                    className={cn(
+                      'flex cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 transition-colors',
+                      paymentMethod === 'beans'
+                        ? 'border-orange/40 bg-orange/10'
+                        : 'border-border bg-surface-el',
+                    )}
+                  >
+                    <span className="text-sm font-medium">Оплатить за Бинами</span>
+                    <input
+                      type="radio"
+                      name="pay-method"
+                      className="accent-orange"
+                      checked={paymentMethod === 'beans'}
+                      onChange={() => setPaymentMethod('beans')}
+                    />
+                  </label>
+                </div>
+
                 <div className="mb-3 flex items-center justify-between gap-3 text-sm">
                   <span className="text-muted">Итого</span>
                   <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
@@ -306,10 +416,15 @@ export default function DrinkAddonsSheet({
                   fullWidth
                   size="lg"
                   loading={confirming}
-                  onClick={() => onConfirm({ totalRub, totalBeans, labels })}
+                  onClick={() =>
+                    onConfirm({ totalRub, totalBeans, labels, paymentMethod })
+                  }
                 >
-                  {confirming ? 'Оформляем…' : 'Подтвердить заказ'}
+                  {confirming ? 'Оформляем…' : 'Оплатить и получить купон'}
                 </Button>
+                <p className="mt-3 text-center text-[11px] text-muted">
+                  Покупка фискализируется сразу
+                </p>
               </div>
             )}
           </motion.div>

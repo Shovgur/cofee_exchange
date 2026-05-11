@@ -134,6 +134,10 @@ export interface Coupon {
   isPreorder?: boolean;
   saleStartsAt?: string;
   volumeLabel?: string;
+  /** Полное текстовое описание состава заказа (напиток, объём, добавки). */
+  purchaseSummary?: string;
+  /** Способ оплаты в демо-флоу */
+  paymentMethod?: 'card' | 'beans';
 }
 
 // User

@@ -9,7 +9,6 @@ import {
   TrendingDown,
   Minus,
   Bell,
-  ShoppingCart,
   AlertCircle,
 } from "lucide-react";
 import { useCountry } from "@/contexts/CountryContext";
@@ -144,6 +143,7 @@ export default function DrinkPage({ params }: PageProps) {
     totalRub: number;
     totalBeans: number;
     labels: string[];
+    paymentMethod: "card" | "beans";
   }) {
     if (!user || !drink) return;
     setBuying(true);
@@ -167,6 +167,15 @@ export default function DrinkPage({ params }: PageProps) {
         Date.now() + 7 * 24 * 60 * 60 * 1000,
       ).toISOString();
       const extras = payload.labels.length ? payload.labels.join(", ") : "";
+      const payLabel =
+        payload.paymentMethod === "card" ? "Оплата картой" : "Оплата Бинами";
+      const purchaseSummary = [
+        drink.name,
+        `Объём: ${activeVol.label} мл`,
+        extras ? `Добавки: ${extras}` : "Добавки: без добавок",
+        `Итого: ${Math.round(payload.totalRub)} ${country.currencySymbol} · ${payload.totalBeans} бинов`,
+        payLabel,
+      ].join("\n");
       const couponData: Omit<Coupon, "id"> = {
         drinkId: drink.id,
         drinkName: drink.name,
@@ -180,8 +189,10 @@ export default function DrinkPage({ params }: PageProps) {
         qrData: `CE:${drink.id}:${payload.totalRub}:${activeVol.value}:${country.id}:${Date.now()}:${payload.totalBeans}:${extras}`,
         countryId: country.id,
         volumeLabel: extras
-          ? `${activeVol.label} (${extras})`
-          : activeVol.label,
+          ? `${activeVol.label} мл (${extras})`
+          : `${activeVol.label} мл`,
+        purchaseSummary,
+        paymentMethod: payload.paymentMethod,
       };
       addCoupon(couponData);
       setBuying(false);
@@ -196,7 +207,7 @@ export default function DrinkPage({ params }: PageProps) {
 
   return (
     <AuthGate fallbackMessage="Карточка напитка и возможность покупки доступны только авторизованным пользователям.">
-      <div className="pb-6">
+      <div className="pb-[calc(8rem+env(safe-area-inset-bottom,0px))] lg:pb-6">
         {/* Top bar */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <button
@@ -240,15 +251,10 @@ export default function DrinkPage({ params }: PageProps) {
             <div className="p-5">
               <div className="flex items-start justify-between gap-4 mb-5">
                 <div className="min-w-0 flex-1 pr-1">
-                  <h1 className="text-xl font-bold leading-tight">
-                    {drink.name}
-                  </h1>
-                  <p className="text-sm text-muted mt-0.5">
-                    {drink.description}
-                  </p>
+                  <h1 className="text-xl font-bold leading-tight">{drink.name}</h1>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-3">
-                  <div className="flex flex-nowrap items-baseline justify-end gap-x-4">
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <div className="flex flex-col items-end gap-1">
                     <span
                       key={`price-rub-${animKey}`}
                       className={cn(
@@ -264,9 +270,9 @@ export default function DrinkPage({ params }: PageProps) {
                     >
                       {formatPrice(activeVol.price, country.currencySymbol)}
                     </span>
-                    <span className="inline-flex shrink-0 items-center gap-1.5 pl-0.5 text-lg font-semibold tabular-nums text-amber-400/95">
+                    <span className="inline-flex items-center gap-1 text-lg font-semibold tabular-nums text-amber-400/95">
                       {drinkBeans}
-                      <CoffeeBeanIcon size={17} className="shrink-0 -translate-y-px" />
+                      <CoffeeBeanIcon size={17} className="shrink-0" />
                     </span>
                   </div>
                   <div
@@ -284,8 +290,8 @@ export default function DrinkPage({ params }: PageProps) {
               </div>
 
               {/* Volume selector */}
-              <div className="mb-4 pt-0.5">
-                <p className="text-xs text-muted mb-2.5">Объём</p>
+              <div className="mb-0 pt-0.5">
+                <p className="text-xs text-muted mb-2.5">Объём, мл</p>
                 <div className="flex gap-2">
                   {drink.volumes.map((v) => (
                     <button
@@ -303,48 +309,13 @@ export default function DrinkPage({ params }: PageProps) {
                   ))}
                 </div>
               </div>
-
-              {/* Price stats */}
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  {
-                    label: "Базовая",
-                    value: formatPrice(
-                      activeVol.basePrice ?? drink.basePrice,
-                      country.currencySymbol,
-                    ),
-                  },
-                  {
-                    label: "Мин.",
-                    value: formatPrice(
-                      Math.min(...activeVol.priceHistory.map((p) => p.price)),
-                      country.currencySymbol,
-                    ),
-                  },
-                  {
-                    label: "Макс.",
-                    value: formatPrice(
-                      Math.max(...activeVol.priceHistory.map((p) => p.price)),
-                      country.currencySymbol,
-                    ),
-                  },
-                ].map(({ label, value }) => (
-                  <div
-                    key={label}
-                    className="bg-surface-el rounded-2xl p-3 text-center"
-                  >
-                    <div className="text-xs text-muted mb-1">{label}</div>
-                    <div className="text-sm font-semibold">{value}</div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
 
           {/* Chart */}
           <div className="bg-surface rounded-3xl p-4">
             <h2 className="text-sm font-semibold mb-3">
-              График цены · {activeVol.label}
+              График цены · {activeVol.label} мл
             </h2>
             <PriceChart
               data={activeVol.priceHistory}
@@ -356,36 +327,64 @@ export default function DrinkPage({ params }: PageProps) {
             </p>
           </div>
 
-          {/* Description & КБЖУ */}
-          <div className="bg-surface rounded-3xl p-5 space-y-4">
-            <div>
-              <h2 className="text-sm font-semibold mb-2">Описание</h2>
-              <p className="text-sm text-muted leading-relaxed">
-                {drink.description}
-              </p>
+          {/* Цена за бины и базовая — ниже графика */}
+          <div className="bg-surface rounded-3xl p-5 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted">За Бины</span>
+              <span className="inline-flex items-center gap-1.5 text-lg font-semibold tabular-nums text-amber-400/95">
+                {drinkBeans}
+                <CoffeeBeanIcon size={17} className="shrink-0" />
+              </span>
             </div>
-            <div>
-              <h2 className="text-sm font-semibold mb-3">КБЖУ на порцию</h2>
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { label: "Кал.", value: `${drink.calories}` },
-                  { label: "Белки", value: `${drink.proteins}г` },
-                  { label: "Жиры", value: `${drink.fats}г` },
-                  { label: "Углев.", value: `${drink.carbs}г` },
-                ].map(({ label, value }) => (
-                  <div
-                    key={label}
-                    className="bg-surface-el rounded-2xl p-2.5 text-center"
-                  >
-                    <div className="text-xs text-muted">{label}</div>
-                    <div className="text-sm font-semibold mt-0.5">{value}</div>
-                  </div>
-                ))}
-              </div>
+            <div className="flex items-center justify-between gap-3 pt-1 border-t border-border/60">
+              <span className="text-sm text-muted">Базовая цена</span>
+              <span className="text-base font-semibold">
+                {formatPrice(
+                  activeVol.basePrice ?? drink.basePrice,
+                  country.currencySymbol,
+                )}
+              </span>
             </div>
           </div>
+        </div>
 
-          {/* Buy */}
+        {/* Фиксированная кнопка над нижней навигацией (мобильные) */}
+        <div
+          className="lg:hidden fixed inset-x-0 z-[10035] px-4 pb-2 pointer-events-none"
+          style={{
+            bottom:
+              "calc(5.25rem + env(safe-area-inset-bottom, 0px))",
+          }}
+        >
+          <div className="pointer-events-auto max-w-lg mx-auto">
+            <Button
+              fullWidth
+              size="lg"
+              onClick={() => {
+                setBought(false);
+                setShowAddons(true);
+              }}
+            >
+              <span className="flex flex-col items-center gap-0.5">
+                <span className="font-semibold">Продолжить</span>
+                <span className="text-xs font-normal opacity-90 inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
+                  <span>{activeVol.label} мл</span>
+                  <span>·</span>
+                  <span>
+                    {formatPrice(activeVol.price, country.currencySymbol)}
+                  </span>
+                  <span>·</span>
+                  <span className="inline-flex items-center gap-0.5 tabular-nums">
+                    {drinkBeans}
+                    <CoffeeBeanIcon size={14} className="shrink-0" />
+                  </span>
+                </span>
+              </span>
+            </Button>
+          </div>
+        </div>
+
+        <div className="hidden lg:block px-4 mt-4">
           <Button
             fullWidth
             size="lg"
@@ -394,15 +393,19 @@ export default function DrinkPage({ params }: PageProps) {
               setShowAddons(true);
             }}
           >
-            <ShoppingCart size={18} />
-            <span className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-              <span>
-                Купить {activeVol.label} за{" "}
-                {formatPrice(activeVol.price, country.currencySymbol)}
-              </span>
-              <span className="inline-flex items-center gap-1 font-semibold tabular-nums opacity-95">
-                {drinkBeans}
-                <CoffeeBeanIcon size={16} className="shrink-0" />
+            <span className="flex flex-col items-center gap-0.5">
+              <span className="font-semibold">Продолжить</span>
+              <span className="text-xs font-normal opacity-90 inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
+                <span>{activeVol.label} мл</span>
+                <span>·</span>
+                <span>
+                  {formatPrice(activeVol.price, country.currencySymbol)}
+                </span>
+                <span>·</span>
+                <span className="inline-flex items-center gap-0.5 tabular-nums">
+                  {drinkBeans}
+                  <CoffeeBeanIcon size={14} className="shrink-0" />
+                </span>
               </span>
             </span>
           </Button>
@@ -417,6 +420,12 @@ export default function DrinkPage({ params }: PageProps) {
         basePriceRub={activeVol.price}
         baseBeans={drinkBeans}
         currencySymbol={country.currencySymbol}
+        drinkNutrition={{
+          calories: drink.calories,
+          proteins: drink.proteins,
+          fats: drink.fats,
+          carbs: drink.carbs,
+        }}
         onConfirm={confirmPurchase}
         confirming={buying}
         bought={bought}

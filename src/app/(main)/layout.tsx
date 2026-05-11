@@ -1,6 +1,6 @@
-import BottomNav from '@/components/navigation/BottomNav';
-import DesktopSidebar from '@/components/navigation/DesktopSidebar';
-import type { ReactNode } from 'react';
+import BottomNav from "@/components/navigation/BottomNav";
+import DesktopSidebar from "@/components/navigation/DesktopSidebar";
+import type { ReactNode } from "react";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   return (
@@ -8,15 +8,11 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       {/* Desktop sidebar (hidden on mobile) */}
       <DesktopSidebar />
 
-      {/* Content area */}
-      {/* Mobile: centered single-column PWA  */}
-      {/* Desktop: offset by sidebar width, full content width */}
       <div className="lg:ml-64">
         {/* Desktop: inner page wrapper */}
         <div className="lg:max-w-none">
-          {/* Mobile wrapper: max-w, centered */}
-          <div className="max-w-lg mx-auto lg:max-w-none lg:mx-0 relative flex flex-col min-h-lvh lg:min-h-screen lg:h-auto">
-            <main className="flex flex-1 min-h-0 flex-col overflow-y-auto scrollable bg-bg pt-[env(safe-area-inset-top,0px)] pb-nav-safe lg:overflow-visible lg:pb-0 lg:pt-0">
+          <div className="max-w-lg mx-auto lg:max-w-none lg:mx-0 relative flex flex-col max-lg:h-[100dvh] max-lg:max-h-[100dvh] max-lg:min-h-0 max-lg:overflow-hidden lg:min-h-screen lg:h-auto lg:max-h-none lg:overflow-visible">
+            <main className="flex flex-1 min-h-0 flex-col overflow-y-auto overflow-x-visible scrollable bg-bg pt-[env(safe-area-inset-top,0px)] pb-nav-safe lg:overflow-visible lg:pb-0 lg:pt-0">
               {children}
             </main>
             {/* Mobile bottom nav (hidden on desktop) */}

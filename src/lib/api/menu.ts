@@ -81,10 +81,17 @@ function entryVolumeValue(entry: ApiPriceItem): string {
   return litersToValueKey(entryCapacityLiters(entry));
 }
 
+/** Подпись объёма в миллилитрах для UI (200 / 400 / 600). */
 function entryVolumeLabel(entry: ApiPriceItem): string {
+  const liters = entryCapacityLiters(entry);
+  if (liters > 0) return `${Math.round(liters * 1000)}`;
   const v = entry.volume?.trim();
-  if (v) return `${v} л`;
-  return `${litersToValueKey(entryCapacityLiters(entry))} л`;
+  if (v) {
+    const n = parseFloat(v.replace(',', '.'));
+    if (Number.isFinite(n) && n <= 2) return `${Math.round(n * 1000)}`;
+    return v;
+  }
+  return '0';
 }
 
 // ─── Data transformation: API → UI model

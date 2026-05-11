@@ -19,9 +19,9 @@ export const IPO_DRINKS: IpoDrink[] = [
     status: 'upcoming',
     saleStartsAt: new Date(now + 3 * day + 4 * 60 * 60 * 1000).toISOString(),
     volumes: [
-      { label: '0.2 л', value: '0.2', preorderPrice: 169 },
-      { label: '0.4 л', value: '0.4', preorderPrice: 219 },
-      { label: '0.6 л', value: '0.6', preorderPrice: 279 },
+      { label: '200', value: '0.2', preorderPrice: 169 },
+      { label: '400', value: '0.4', preorderPrice: 219 },
+      { label: '600', value: '0.6', preorderPrice: 279 },
     ],
   },
   {
@@ -38,9 +38,9 @@ export const IPO_DRINKS: IpoDrink[] = [
     status: 'upcoming',
     saleStartsAt: new Date(now + 10 * day + 2 * 60 * 60 * 1000).toISOString(),
     volumes: [
-      { label: '0.2 л', value: '0.2', preorderPrice: 199 },
-      { label: '0.4 л', value: '0.4', preorderPrice: 259 },
-      { label: '0.6 л', value: '0.6', preorderPrice: 319 },
+      { label: '200', value: '0.2', preorderPrice: 199 },
+      { label: '400', value: '0.4', preorderPrice: 259 },
+      { label: '600', value: '0.6', preorderPrice: 319 },
     ],
   },
   {
@@ -57,9 +57,9 @@ export const IPO_DRINKS: IpoDrink[] = [
     status: 'upcoming',
     saleStartsAt: new Date(now + 17 * day + 9 * 60 * 60 * 1000).toISOString(),
     volumes: [
-      { label: '0.2 л', value: '0.2', preorderPrice: 149 },
-      { label: '0.4 л', value: '0.4', preorderPrice: 189 },
-      { label: '0.6 л', value: '0.6', preorderPrice: 239 },
+      { label: '200', value: '0.2', preorderPrice: 149 },
+      { label: '400', value: '0.4', preorderPrice: 189 },
+      { label: '600', value: '0.6', preorderPrice: 239 },
     ],
   },
 
@@ -78,9 +78,9 @@ export const IPO_DRINKS: IpoDrink[] = [
     status: 'upcoming',
     saleStartsAt: new Date(now + 3 * day + 4 * 60 * 60 * 1000).toISOString(),
     volumes: [
-      { label: '0.2 л', value: '0.2', preorderPrice: 840 },
-      { label: '0.4 л', value: '0.4', preorderPrice: 1090 },
-      { label: '0.6 л', value: '0.6', preorderPrice: 1390 },
+      { label: '200', value: '0.2', preorderPrice: 840 },
+      { label: '400', value: '0.4', preorderPrice: 1090 },
+      { label: '600', value: '0.6', preorderPrice: 1390 },
     ],
   },
   {
@@ -97,9 +97,9 @@ export const IPO_DRINKS: IpoDrink[] = [
     status: 'upcoming',
     saleStartsAt: new Date(now + 10 * day + 2 * 60 * 60 * 1000).toISOString(),
     volumes: [
-      { label: '0.2 л', value: '0.2', preorderPrice: 990 },
-      { label: '0.4 л', value: '0.4', preorderPrice: 1290 },
-      { label: '0.6 л', value: '0.6', preorderPrice: 1590 },
+      { label: '200', value: '0.2', preorderPrice: 990 },
+      { label: '400', value: '0.4', preorderPrice: 1290 },
+      { label: '600', value: '0.6', preorderPrice: 1590 },
     ],
   },
 ];

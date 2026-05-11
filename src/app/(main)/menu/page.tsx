@@ -8,16 +8,15 @@ import {
   TrendingDown,
   Minus,
   Lock,
-  ChevronRight,
 } from "lucide-react";
 import { useCountry } from "@/contexts/CountryContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePrices } from "@/contexts/PricesContext";
-import { PriceRefreshBanner } from "@/components/PriceRefreshBanner";
 import { cn, formatPriceChange, formatPrice } from "@/lib/utils";
 import type { Drink, DrinkCategory, PriceTrend, VolumePrice } from "@/types";
-import { mockBeansForDrinkPrice } from "@/lib/mock-data/drink-addons";
 import CoffeeBeanIcon from "@/components/ui/CoffeeBeanIcon";
+
+type MenuTab = DrinkCategory | "all" | "secret";
 
 const ALL_TABS: {
   value: DrinkCategory | "all";
@@ -29,6 +28,12 @@ const ALL_TABS: {
   { value: "lemonade", label: "Лимонады", emoji: "🍋" },
   { value: "tea", label: "Чаи", emoji: "🍵" },
 ];
+
+const SECRET_TAB = {
+  value: "secret" as const,
+  label: "Secret",
+  emoji: "🔒",
+};
 
 const CATEGORY_HEADER: Record<string, string> = {
   coffee: "☕ Кофе",
@@ -51,6 +56,10 @@ function TrendArrow({ trend }: { trend: PriceTrend }) {
   return <Minus size={11} className="text-muted shrink-0" />;
 }
 
+function formatBeans(n: number) {
+  return new Intl.NumberFormat("ru-RU").format(n);
+}
+
 function VolumeCol({
   vol,
   currencySymbol,
@@ -62,7 +71,6 @@ function VolumeCol({
   flashing: boolean;
   flashGen: number;
 }) {
-  const beans = mockBeansForDrinkPrice(vol.price);
   const flashClass =
     vol.trend === "up"
       ? "price-flash-up"
@@ -78,7 +86,9 @@ function VolumeCol({
         flashing && flashClass,
       )}
     >
-      <span className="text-[10px] text-muted mb-0.5">{vol.label}</span>
+      <span className="text-[10px] text-muted mb-0.5 tabular-nums">
+        {vol.label}
+      </span>
       <div className="flex flex-col items-center gap-0.5">
         <span
           className={cn(
@@ -92,10 +102,6 @@ function VolumeCol({
           )}
         >
           {formatPrice(vol.price, currencySymbol)}
-        </span>
-        <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums text-amber-400/95">
-          {beans}
-          <CoffeeBeanIcon size={12} className="shrink-0 opacity-95" />
         </span>
       </div>
       <div
@@ -169,13 +175,14 @@ function DrinkTile({
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <span className="font-semibold text-sm leading-tight truncate">
+        <div className="flex items-start gap-1.5">
+          <span className="font-semibold text-sm leading-snug line-clamp-2 break-words">
             {drink.name}
           </span>
-          {isLocked && <Lock size={11} className="text-muted shrink-0" />}
+          {isLocked && (
+            <Lock size={11} className="text-muted shrink-0 mt-0.5" />
+          )}
         </div>
-        <span className="text-xs text-muted">{drink.volume}</span>
       </div>
 
       <div className="flex items-start gap-1 shrink-0">
@@ -210,6 +217,23 @@ function DrinkSkeleton() {
   );
 }
 
+function SecretMenuPanel() {
+  return (
+    <div className="rounded-2xl border border-orange/30 bg-[#1c1008] px-5 py-10 text-center">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange/15">
+        <Lock size={26} className="text-orange" />
+      </div>
+      <h2 className="text-lg font-semibold">Secret Menu</h2>
+      <p className="text-sm text-muted mt-2 max-w-xs mx-auto leading-relaxed">
+        Эксклюзивные позиции только за Бины. Раздел скоро откроется в приложении.
+      </p>
+      <div className="mt-5 inline-flex px-3 py-1.5 rounded-lg bg-surface-el">
+        <span className="text-xs font-medium text-muted">Скоро</span>
+      </div>
+    </div>
+  );
+}
+
 export default function MenuPage() {
   const { country } = useCountry();
   const { user } = useAuth();
@@ -219,21 +243,28 @@ export default function MenuPage() {
     error,
     flashMap,
     flashGen,
-    secondsUntilNextPoll,
   } = usePrices();
 
-  const [category, setCategory] = useState<DrinkCategory | "all">("all");
+  const [category, setCategory] = useState<MenuTab>("all");
 
-  const categoryTabs = useMemo(() => tabsForDrinks(drinks), [drinks]);
+  const categoryTabs = useMemo(
+    () => [...tabsForDrinks(drinks), SECRET_TAB],
+    [drinks],
+  );
 
   useEffect(() => {
+    if (category === "secret") return;
     if (category !== "all" && !drinks.some((d) => d.category === category)) {
       setCategory("all");
     }
   }, [drinks, category]);
 
   const filtered =
-    category === "all" ? drinks : drinks.filter((d) => d.category === category);
+    category === "secret"
+      ? []
+      : category === "all"
+        ? drinks
+        : drinks.filter((d) => d.category === category);
 
   const groups: { key: DrinkCategory; items: Drink[] }[] = [];
   for (const key of ["coffee", "lemonade", "tea"] as DrinkCategory[]) {
@@ -241,122 +272,116 @@ export default function MenuPage() {
     if (items.length > 0) groups.push({ key, items });
   }
 
+  const positionsLabel =
+    category === "secret"
+      ? "Скоро"
+      : loading
+        ? "…"
+        : `${filtered.length} позиций`;
+
   return (
-    <div className="min-h-full">
-      <div
-        className="lg:hidden fixed inset-x-0 z-[10040] px-3 pb-1"
-        style={{
-          bottom: "calc(3.75rem + 0.875rem + env(safe-area-inset-bottom, 0px))",
-        }}
-      >
+    <div className="flex w-full flex-1 min-h-0 flex-col lg:flex-none lg:min-h-full">
+      {/* Прокрутка только у <main>; вложенный overflow-y ломал sticky табов */}
+      <div className="flex w-full flex-col">
+        {/* Шапка — уходит при скролле */}
+        <div className="shrink-0 px-4 lg:px-8 pt-4 lg:pt-8 pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl lg:text-3xl font-bold">Меню</h1>
+              {user ? (
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm font-medium leading-tight truncate">
+                    {user.name}
+                  </p>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-amber-400/95">
+                    <span>{formatBeans(user.loyaltyPoints)}</span>
+                    <CoffeeBeanIcon size={16} className="shrink-0" />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <div className="shrink-0 text-right pt-0.5">
+              <p className="text-xs text-muted tabular-nums">{positionsLabel}</p>
+            </div>
+          </div>
+        </div>
+
         <div
-          className="flex items-center justify-between gap-3 bg-[#1c1008] border border-orange/30 rounded-2xl px-4 py-3 shadow-lg opacity-60 cursor-not-allowed"
-          style={{ boxShadow: "0 0 20px rgba(251,100,21,0.10)" }}
+          className={cn(
+            "max-lg:sticky max-lg:top-0 z-[10025] shrink-0 w-full border-b border-border/60 max-lg:bg-bg bg-bg/95 px-4 lg:px-8 py-2.5 max-lg:shadow-[0_6px_20px_-12px_rgba(0,0,0,0.85)] lg:backdrop-blur-lg lg:shadow-none lg:supports-[backdrop-filter]:bg-bg/85 lg:static lg:z-auto",
+          )}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-orange/15 flex items-center justify-center flex-shrink-0">
-              <Lock size={18} className="text-orange" />
-            </div>
-            <div className="min-w-0">
-              <div className="font-semibold text-sm leading-tight">
-                Secret Menu
-              </div>
-              <div className="text-xs text-muted mt-0.5">Только за Бины</div>
-            </div>
-          </div>
-          <div className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-surface-el">
-            <span className="text-xs text-muted font-medium">Скоро</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-md pt-4 pb-2 px-4 lg:px-8 lg:pt-8">
-        <div className="flex items-center justify-between mb-3 gap-3">
-          <div className="min-w-0">
-            <h1 className="text-xl lg:text-3xl font-bold">Меню</h1>
-            <p className="text-xs lg:text-sm text-muted mt-0.5">
-              {country.name} · {loading ? "…" : `${filtered.length} позиций`}
-            </p>
-            <div className="mt-3">
-              <PriceRefreshBanner
-                variant="menu"
-                loading={loading}
-                secondsUntilNextPoll={secondsUntilNextPoll}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Category chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 no-select">
-          {categoryTabs.map(({ value, label, emoji }) => (
-            <button
-              key={value}
-              onClick={() => setCategory(value)}
-              className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all",
-                category === value
-                  ? "bg-orange text-white"
-                  : "bg-surface-el text-muted hover:text-white",
-              )}
-            >
-              <span>{emoji}</span>
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="px-4 lg:px-8 pb-8 space-y-6 mt-3">
-        {error && (
-          <div className="bg-danger/10 border border-danger/30 rounded-2xl p-4">
-            <p className="text-sm text-danger">{error}</p>
-          </div>
-        )}
-
-        {loading && !error && (
-          <div className="space-y-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <DrinkSkeleton key={i} />
+          <div className="flex gap-2 overflow-x-auto pb-0.5 no-select">
+            {categoryTabs.map(({ value, label, emoji }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setCategory(value)}
+                className={cn(
+                  "flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all border border-transparent",
+                  category === value
+                    ? value === "secret"
+                      ? "bg-[#1c1008] text-orange border-orange/35 shadow-[0_0_0_1px_rgba(251,100,21,0.25)]"
+                      : "bg-orange text-white"
+                    : value === "secret"
+                      ? "bg-surface-el text-muted border-orange/15 hover:border-orange/30 hover:text-white"
+                      : "bg-surface-el text-muted hover:text-white",
+                )}
+              >
+                <span>{emoji}</span>
+                {label === "Secret" ? "Secret Menu" : label}
+              </button>
             ))}
           </div>
-        )}
+        </div>
 
-        {!loading && !error && filtered.length === 0 && (
-          <div className="text-center text-muted py-16">Нет позиций</div>
-        )}
+        <div className="shrink-0 px-4 lg:px-8 pb-8 space-y-6 pt-4">
+          {category === "secret" ? (
+            <SecretMenuPanel />
+          ) : (
+            <>
+              {error && (
+                <div className="bg-danger/10 border border-danger/30 rounded-2xl p-4">
+                  <p className="text-sm text-danger">{error}</p>
+                </div>
+              )}
 
-        {!loading &&
-          groups.map(({ key, items }) => (
-            <section key={key}>
-              <h2 className="text-base font-bold mb-2 px-0.5">
-                {CATEGORY_HEADER[key]}
-              </h2>
-              <div className="space-y-2">
-                {items.map((drink) => (
-                  <DrinkTile
-                    key={drink.id}
-                    drink={drink}
-                    isLocked={!user}
-                    currencySymbol={country.currencySymbol}
-                    flashTrend={flashMap.get(drink.id)}
-                    flashGen={flashGen}
-                  />
+              {loading && !error && (
+                <div className="space-y-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <DrinkSkeleton key={i} />
+                  ))}
+                </div>
+              )}
+
+              {!loading && !error && filtered.length === 0 && (
+                <div className="text-center text-muted py-16">Нет позиций</div>
+              )}
+
+              {!loading &&
+                groups.map(({ key, items }) => (
+                  <section key={key}>
+                    <h2 className="text-base font-bold mb-2 px-0.5">
+                      {CATEGORY_HEADER[key]}
+                    </h2>
+                    <div className="space-y-2">
+                      {items.map((drink) => (
+                        <DrinkTile
+                          key={drink.id}
+                          drink={drink}
+                          isLocked={!user}
+                          currencySymbol={country.currencySymbol}
+                          flashTrend={flashMap.get(drink.id)}
+                          flashGen={flashGen}
+                        />
+                      ))}
+                    </div>
+                  </section>
                 ))}
-              </div>
-            </section>
-          ))}
+            </>
+          )}
+        </div>
       </div>
-
-      {/* Spacer so last items are not hidden behind the Secret Menu banner on mobile */}
-      <div
-        className="lg:hidden"
-        style={{
-          height: "calc(4.875rem + env(safe-area-inset-bottom, 0px))",
-        }}
-        aria-hidden
-      />
     </div>
   );
 }

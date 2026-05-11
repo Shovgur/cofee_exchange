@@ -1,10 +1,19 @@
+'use client';
+
+import { useId } from 'react';
+
 interface Props {
   size?: number;
   className?: string;
 }
 
-/** Компактное кофейное зерно рядом с числовой «ценой» в бонусах */
+/**
+ * Золотое кофейное зерно, наклон вправо (как символ «Бин»).
+ */
 export default function CoffeeBeanIcon({ size = 14, className }: Props) {
+  const uid = useId().replace(/:/g, '');
+  const gradId = `bean-gold-${uid}`;
+
   return (
     <svg
       width={size}
@@ -13,22 +22,29 @@ export default function CoffeeBeanIcon({ size = 14, className }: Props) {
       className={className}
       aria-hidden
     >
+      <defs>
+        <linearGradient id={gradId} x1="35%" y1="15%" x2="65%" y2="85%">
+          <stop offset="0%" stopColor="#f6e27a" />
+          <stop offset="45%" stopColor="#d4a017" />
+          <stop offset="100%" stopColor="#8b6914" />
+        </linearGradient>
+      </defs>
       <ellipse
         cx="12"
         cy="12"
         rx="7"
         ry="10"
-        fill="currentColor"
-        transform="rotate(-26 12 12)"
+        fill={`url(#${gradId})`}
+        transform="rotate(28 12 12)"
       />
       <path
         d="M8.2 9.5 Q12 12 15.8 14.5"
         fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
+        stroke="#6b4e0f"
+        strokeWidth="1.2"
         strokeLinecap="round"
-        opacity="0.4"
-        transform="rotate(-26 12 12)"
+        opacity="0.55"
+        transform="rotate(28 12 12)"
       />
     </svg>
   );

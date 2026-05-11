@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User,
@@ -11,10 +11,11 @@ import {
   Info,
   LogOut,
   ChevronRight,
-  Star,
   Globe,
   Shield,
   Trophy,
+  Barcode,
+  History,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
@@ -22,6 +23,8 @@ import AuthGate from '@/components/auth/AuthGate';
 import CountrySelector from '@/components/country/CountrySelector';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
+import MyCodeModal from '@/components/profile/MyCodeModal';
+import CoffeeBeanIcon from '@/components/ui/CoffeeBeanIcon';
 import { formatDateTime, cn } from '@/lib/utils';
 
 function NotificationItem({ title, subtitle, enabled, onToggle }: {
@@ -51,22 +54,16 @@ function NotificationItem({ title, subtitle, enabled, onToggle }: {
   );
 }
 
-const LOYALTY_LEVELS = ['Bronze', 'Silver', 'Gold', 'Platinum'];
-const LOYALTY_COLORS: Record<string, string> = {
-  Bronze: 'text-amber-600',
-  Silver: 'text-slate-400',
-  Gold: 'text-yellow-400',
-  Platinum: 'text-cyan-400',
-};
 
 export default function ProfilePage() {
   const { user, logout, coupons } = useAuth();
-  const { country, setCountry, countries } = useCountry();
+  const { country } = useCountry();
   const router = useRouter();
 
   const [showNotifs, setShowNotifs] = useState(false);
   const [showCountry, setShowCountry] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
+  const [showMyCode, setShowMyCode] = useState(false);
   const [notifSettings, setNotifSettings] = useState({
     priceAlerts: true,
     promotions: true,
@@ -74,8 +71,17 @@ export default function ProfilePage() {
     orderStatus: true,
   });
 
-  const activeCoupons = coupons.filter((c) => c.status === 'active' && c.countryId === country.id);
-  const usedCoupons = coupons.filter((c) => c.status === 'used' && c.countryId === country.id);
+  const barcodeDisplay = useMemo(() => {
+    if (!user) return '1234 5678';
+    const d = user.phone.replace(/\D/g, '');
+    const tail = (d.slice(-8) || user.id.replace(/\D/g, '').slice(-8)).padStart(8, '0');
+    return `${tail.slice(0, 4)} ${tail.slice(4)}`;
+  }, [user]);
+
+  const qrPayload = useMemo(
+    () => (user ? `CE:USER:${user.id}:${user.phone}` : ''),
+    [user],
+  );
 
   function toggleNotif(key: keyof typeof notifSettings) {
     setNotifSettings((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -84,39 +90,62 @@ export default function ProfilePage() {
   return (
     <AuthGate fallbackMessage="Войдите в аккаунт, чтобы видеть профиль, историю покупок и настройки.">
       {user && (
-        <div className="pb-6 max-w-2xl lg:mx-8 lg:pt-8">
+        <div className="pb-6 max-w-2xl lg:mx-8 lg:pt-8 w-full">
           {/* Header */}
           <div className="px-4 pt-6 pb-5 lg:px-0">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 mb-5">
               <div className="w-16 h-16 rounded-2xl bg-orange/20 flex items-center justify-center flex-shrink-0">
                 <User size={28} className="text-orange" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold">{user.name}</h1>
-                <p className="text-sm text-muted">{user.phone}</p>
-                <div className={cn(
-                  'inline-flex items-center gap-1 mt-1 text-sm font-medium',
-                  LOYALTY_COLORS[user.loyaltyLevel] ?? 'text-muted',
-                )}>
-                  <Star size={13} fill="currentColor" />
-                  {user.loyaltyLevel}
-                </div>
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold truncate">{user.name}</h1>
+                <p className="text-sm text-muted truncate">{user.phone}</p>
               </div>
             </div>
 
-            {/* Loyalty points */}
-            <div className="grid grid-cols-3 gap-3 mt-5">
-              <div className="bg-surface rounded-2xl p-3 text-center">
-                <div className="text-lg font-bold text-orange">{user.loyaltyPoints}</div>
-                <div className="text-xs text-muted mt-0.5">Бонусы</div>
+            <button
+              type="button"
+              onClick={() => setShowMyCode(true)}
+              className="w-full flex items-center gap-4 bg-surface rounded-2xl p-4 mb-3 border border-border hover:bg-surface-el transition-colors text-left"
+            >
+              <div className="w-12 h-12 rounded-xl bg-orange/15 flex items-center justify-center flex-shrink-0">
+                <Barcode size={22} className="text-orange" />
               </div>
-              <div className="bg-surface rounded-2xl p-3 text-center">
-                <div className="text-lg font-bold">{activeCoupons.length}</div>
-                <div className="text-xs text-muted mt-0.5">Активных</div>
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold">Мой код</div>
+                <div className="text-xs text-muted mt-0.5">
+                  Штрихкод для начисления Бинов
+                </div>
               </div>
-              <div className="bg-surface rounded-2xl p-3 text-center">
-                <div className="text-lg font-bold">{usedCoupons.length}</div>
-                <div className="text-xs text-muted mt-0.5">Покупок</div>
+              <ChevronRight size={18} className="text-muted shrink-0" />
+            </button>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-surface rounded-2xl p-3 text-center border border-border">
+                <div className="text-lg font-bold text-orange tabular-nums">
+                  {new Intl.NumberFormat('ru-RU').format(user.loyaltyPoints)}
+                </div>
+                <div className="text-[11px] text-muted mt-1 flex items-center justify-center gap-1">
+                  Баланс
+                  <CoffeeBeanIcon size={12} className="shrink-0" />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  document.getElementById('profile-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+                className="bg-surface rounded-2xl p-3 text-center border border-border hover:bg-surface-el transition-colors flex flex-col items-center justify-center gap-1 min-h-[5.25rem]"
+              >
+                <History size={18} className="text-orange" />
+                <span className="text-xs font-medium leading-tight">История</span>
+              </button>
+              <div className="bg-surface rounded-2xl p-3 text-center border border-border opacity-55 flex flex-col items-center justify-center gap-1 min-h-[5.25rem]">
+                <Trophy size={18} className="text-muted" />
+                <span className="text-[11px] font-medium leading-tight text-muted">
+                  Достижения
+                  <span className="block text-[10px] mt-0.5">(скоро)</span>
+                </span>
               </div>
             </div>
           </div>
@@ -124,7 +153,7 @@ export default function ProfilePage() {
           {/* Sections */}
           <div className="px-4 lg:px-0 space-y-3">
             {/* History */}
-            <div className="bg-surface rounded-2xl overflow-hidden">
+            <div id="profile-history" className="bg-surface rounded-2xl overflow-hidden scroll-mt-24">
               <div className="px-4 py-3 border-b border-border">
                 <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">История</h2>
               </div>
@@ -251,6 +280,13 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      <MyCodeModal
+        open={showMyCode && !!user}
+        onClose={() => setShowMyCode(false)}
+        displayCode={barcodeDisplay}
+        qrPayload={qrPayload}
+      />
 
       {/* Notifications modal */}
       <Modal open={showNotifs} onClose={() => setShowNotifs(false)} title="Уведомления">

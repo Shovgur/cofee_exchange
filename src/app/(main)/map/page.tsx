@@ -113,7 +113,7 @@ export default function MapPage() {
     /* Desktop: flex row (list | map). Mobile: only map with bottom sheet */
     <div
       className={cn(
-        "flex flex-1 shrink-0 flex-col overflow-hidden",
+        "flex w-full flex-1 shrink-0 flex-col overflow-hidden min-h-0",
         "min-h-[calc(100dvh-5rem)] lg:grid lg:h-[100vh] lg:max-h-[100vh] lg:min-h-0 lg:min-w-0",
         "lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden",
       )}
@@ -133,7 +133,7 @@ export default function MapPage() {
             />
           </div>
           <p className="text-xs text-muted mt-2">
-            Все страны · {filteredShops.length}{" "}
+            {filteredShops.length}{" "}
             {filteredShops.length === 1 ? "кофейня" : "кофеен"}
           </p>
         </div>
@@ -178,10 +178,11 @@ export default function MapPage() {
           />
         </div>
 
-        <div className="pointer-events-none absolute top-4 left-4 right-4 z-10 lg:hidden">
-          <div className="inline-flex max-w-full items-center rounded-2xl border border-border bg-bg/80 px-4 py-2 backdrop-blur-md">
-            <span className="truncate text-sm font-medium">
-              Все страны · {shops.length} кофеен
+        <div className="pointer-events-none absolute top-4 right-4 z-10 max-w-[calc(100%-2rem)] lg:hidden flex justify-end">
+          <div className="inline-flex items-center rounded-2xl border border-border bg-bg/80 px-4 py-2 backdrop-blur-md">
+            <span className="truncate text-sm font-medium tabular-nums">
+              {shops.length}{" "}
+              {shops.length === 1 ? "кофейня" : "кофеен"}
             </span>
           </div>
         </div>

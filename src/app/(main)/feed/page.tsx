@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useCountry } from '@/contexts/CountryContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { getFeedByCountry, getIpoDrinkById } from '@/lib/mock-data';
 import { cn, feedTypeLabel, feedTypeColor, formatDate, formatIpoCountdown } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
 import type { FeedItem, FeedItemType, FeedLink, IpoDrink } from '@/types';
 import { ChevronRight, Rocket, Clock } from 'lucide-react';
+import CoffeeBeanIcon from '@/components/ui/CoffeeBeanIcon';
 
 const FILTERS: { value: 'all' | FeedItemType; label: string }[] = [
   { value: 'all',       label: 'Все' },
@@ -141,6 +143,7 @@ function FeedCard({ item, onLink }: { item: FeedItem; onLink: (link?: FeedLink) 
 export default function FeedPage() {
   const { country } = useCountry();
   const router = useRouter();
+  const { user } = useAuth();
   const [filter, setFilter] = useState<'all' | FeedItemType>('all');
 
   const allItems = getFeedByCountry(country.id);
@@ -157,57 +160,78 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-full">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-md pt-4 pb-2 px-4 lg:px-8 lg:pt-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-xl lg:text-3xl font-bold">Лента</h1>
-            <p className="text-xs lg:text-sm text-muted mt-0.5">Новости, акции и события</p>
+    <div className="flex w-full flex-1 min-h-0 flex-col lg:flex-none lg:min-h-full">
+      {/* Прокрутка только у <main>: без вложенного overflow — иначе sticky табов не работает */}
+      <div className="flex w-full flex-col">
+        {/* Шапка — скроллится */}
+        <div className="shrink-0 px-4 lg:px-8 pt-4 lg:pt-8 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0">
+              <h1 className="text-xl lg:text-3xl font-bold">Лента</h1>
+              <p className="text-xs lg:text-sm text-muted mt-0.5">
+                Новости, акции и события
+              </p>
+              {user ? (
+                <div className="mt-3 space-y-1">
+                  <p className="text-sm font-medium truncate">{user.name}</p>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-amber-400/95">
+                    <span>
+                      {new Intl.NumberFormat("ru-RU").format(user.loyaltyPoints)}
+                    </span>
+                    <CoffeeBeanIcon size={16} className="shrink-0" />
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        {/* Filter chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 no-select">
-          {FILTERS.map(({ value, label }) => (
-            <button
-              key={value}
-              onClick={() => setFilter(value)}
-              className={cn(
-                'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap',
-                filter === value
-                  ? value === 'ipo'
-                    ? 'bg-yellow-500 text-black'
-                    : 'bg-orange text-white'
-                  : 'bg-surface-el text-muted hover:text-white',
-              )}
-            >
-              {value === 'ipo' && <Rocket size={12} className="inline mr-1" />}
-              {label}
-            </button>
-          ))}
+        <div
+          className={cn(
+            // max-lg: без backdrop-blur — в Safari blur часто ломает sticky; скролл только в <main> (layout)
+            'max-lg:sticky max-lg:top-0 z-[10025] shrink-0 w-full border-b border-border/60 max-lg:bg-bg bg-bg/95 px-4 lg:px-8 py-2.5 max-lg:shadow-[0_6px_20px_-12px_rgba(0,0,0,0.85)] lg:backdrop-blur-lg lg:shadow-none lg:supports-[backdrop-filter]:bg-bg/85 lg:static lg:z-auto',
+          )}
+        >
+          <div className="flex gap-2 overflow-x-auto pb-0.5 no-select">
+            {FILTERS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFilter(value)}
+                className={cn(
+                  'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap border border-transparent',
+                  filter === value
+                    ? value === 'ipo'
+                      ? 'bg-yellow-500 text-black border-yellow-400/40'
+                      : 'bg-orange text-white'
+                    : 'bg-surface-el text-muted hover:text-white',
+                )}
+              >
+                {value === 'ipo' && <Rocket size={12} className="inline mr-1" />}
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="shrink-0 px-4 lg:px-8 pt-4 pb-8">
+          {items.length === 0 && (
+            <div className="text-center text-muted py-16">Нет материалов</div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 mt-2">
+            {items.map((item) => {
+              if (item.type === 'ipo' && item.link?.type === 'ipo') {
+                const ipo = getIpoDrinkById(item.link.ipoId);
+                if (ipo) return <IpoCard key={item.id} item={item} ipo={ipo} />;
+              }
+              return (
+                <FeedCard key={item.id} item={item} onLink={handleLinkAction} />
+              );
+            })}
+          </div>
         </div>
       </div>
-
-      {/* Items */}
-      <div className="px-4 lg:px-8 pt-2 pb-8">
-        {items.length === 0 && (
-          <div className="text-center text-muted py-16">Нет материалов</div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 mt-2">
-          {items.map((item) => {
-            if (item.type === 'ipo' && item.link?.type === 'ipo') {
-              const ipo = getIpoDrinkById(item.link.ipoId);
-              if (ipo) return <IpoCard key={item.id} item={item} ipo={ipo} />;
-            }
-            return (
-              <FeedCard key={item.id} item={item} onLink={handleLinkAction} />
-            );
-          })}
-        </div>
-      </div>
-
     </div>
   );
 }

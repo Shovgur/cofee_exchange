@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   Rocket,
   Clock,
-  Check,
   ShoppingBag,
   AlertCircle,
   Lock,
@@ -15,9 +14,10 @@ import {
 import { useCountry } from '@/contexts/CountryContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getIpoDrinkById } from '@/lib/mock-data';
-import { cn, formatIpoCountdown } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
-import Modal from '@/components/ui/Modal';
+import DrinkAddonsSheet from '@/components/menu/DrinkAddonsSheet';
+import { mockBeansForDrinkPrice } from '@/lib/mock-data/drink-addons';
 import type { Coupon } from '@/types';
 
 interface PageProps {
@@ -25,34 +25,31 @@ interface PageProps {
 }
 
 function IpoCountdownBlock({ saleStartsAt }: { saleStartsAt: string }) {
-  const [label, setLabel] = useState('');
+  const [, setTick] = useState(0);
 
   useEffect(() => {
-    const tick = () => setLabel(formatIpoCountdown(saleStartsAt));
-    tick();
-    const id = setInterval(tick, 1000);
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(id);
   }, [saleStartsAt]);
 
-  // Parse parts
   const diff = Math.max(0, new Date(saleStartsAt).getTime() - Date.now());
   const totalSecs = Math.floor(diff / 1000);
-  const days  = Math.floor(totalSecs / 86400);
+  const days = Math.floor(totalSecs / 86400);
   const hours = Math.floor((totalSecs % 86400) / 3600);
-  const mins  = Math.floor((totalSecs % 3600) / 60);
-  const secs  = totalSecs % 60;
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
 
   const parts =
     days > 0
       ? [
-          { value: days,  label: 'Дней' },
+          { value: days, label: 'Дней' },
           { value: hours, label: 'Часов' },
-          { value: mins,  label: 'Минут' },
+          { value: mins, label: 'Минут' },
         ]
       : [
           { value: hours, label: 'Часов' },
-          { value: mins,  label: 'Минут' },
-          { value: secs,  label: 'Секунд' },
+          { value: mins, label: 'Минут' },
+          { value: secs, label: 'Секунд' },
         ];
 
   return (
@@ -82,7 +79,7 @@ export default function IpoDrinkPage({ params }: PageProps) {
   const ipo = getIpoDrinkById(params.drinkId);
 
   const [selectedVolume, setSelectedVolume] = useState(0);
-  const [showBuy, setShowBuy] = useState(false);
+  const [showAddons, setShowAddons] = useState(false);
   const [buying, setBuying] = useState(false);
   const [bought, setBought] = useState(false);
 
@@ -97,36 +94,55 @@ export default function IpoDrinkPage({ params }: PageProps) {
   }
 
   const vol = ipo.volumes[selectedVolume];
+  const baseBeans = mockBeansForDrinkPrice(vol.preorderPrice);
 
-  function handlePreorder() {
+  function confirmPreorder(payload: {
+    totalRub: number;
+    totalBeans: number;
+    labels: string[];
+    paymentMethod: 'card' | 'beans';
+  }) {
     if (!user || !ipo) return;
     setBuying(true);
     setTimeout(() => {
       const expiresAt = new Date(new Date(ipo.saleStartsAt).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const extras = payload.labels.length ? payload.labels.join(', ') : '';
+      const payLabel =
+        payload.paymentMethod === 'card' ? 'Оплата картой' : 'Оплата Бинами';
+      const purchaseSummary = [
+        `${ipo.name} (IPO, предзаказ)`,
+        `Объём: ${vol.label} мл`,
+        extras ? `Добавки: ${extras}` : 'Добавки: без добавок',
+        `Итого: ${Math.round(payload.totalRub)} ${country.currencySymbol} · ${payload.totalBeans} бинов`,
+        payLabel,
+      ].join('\n');
+
       const couponData: Omit<Coupon, 'id'> = {
         drinkId: ipo.id,
         drinkName: ipo.name,
         category: ipo.category,
-        purchasePrice: vol.preorderPrice,
+        purchasePrice: payload.totalRub,
         currency: country.currency,
         currencySymbol: country.currencySymbol,
         purchasedAt: new Date().toISOString(),
         expiresAt,
         status: 'active',
-        qrData: `CE:IPO:${ipo.id}:${vol.preorderPrice}:${vol.value}:${country.id}:${Date.now()}`,
+        qrData: `CE:IPO:${ipo.id}:${payload.totalRub}:${vol.value}:${country.id}:${Date.now()}:${extras}`,
         countryId: country.id,
         isPreorder: true,
         saleStartsAt: ipo.saleStartsAt,
-        volumeLabel: vol.label,
+        volumeLabel: extras ? `${vol.label} мл (${extras})` : `${vol.label} мл`,
+        purchaseSummary,
+        paymentMethod: payload.paymentMethod,
       };
       addCoupon(couponData);
       setBuying(false);
       setBought(true);
       setTimeout(() => {
-        setShowBuy(false);
+        setShowAddons(false);
         setBought(false);
         router.push('/coupons');
-      }, 1800);
+      }, 1500);
     }, 1200);
   }
 
@@ -135,7 +151,6 @@ export default function IpoDrinkPage({ params }: PageProps) {
 
   return (
     <div className="pb-8">
-      {/* Top bar */}
       <div className="flex items-center px-4 pt-4 pb-2">
         <button
           onClick={() => router.back()}
@@ -147,7 +162,6 @@ export default function IpoDrinkPage({ params }: PageProps) {
       </div>
 
       <div className="px-4 space-y-4">
-        {/* Hero */}
         <div className="bg-surface rounded-3xl overflow-hidden">
           {ipo.photoUrl ? (
             <div className="relative h-56 w-full">
@@ -182,16 +196,13 @@ export default function IpoDrinkPage({ params }: PageProps) {
           )}
         </div>
 
-        {/* Countdown */}
         <IpoCountdownBlock saleStartsAt={ipo.saleStartsAt} />
 
-        {/* Full description */}
         <div className="bg-surface rounded-2xl p-4">
           <h2 className="text-sm font-semibold mb-2">О напитке</h2>
           <p className="text-sm text-muted leading-relaxed">{ipo.fullDescription}</p>
         </div>
 
-        {/* Volume selector + preorder price */}
         <div className="bg-surface rounded-2xl p-4">
           <h2 className="text-sm font-semibold mb-3">Объём и цена предзаказа</h2>
           <div className="grid grid-cols-3 gap-2 mb-4">
@@ -206,7 +217,8 @@ export default function IpoDrinkPage({ params }: PageProps) {
                     : 'bg-surface-el border-transparent hover:border-border text-muted',
                 )}
               >
-                <div className="text-sm font-semibold">{v.label}</div>
+                <div className="text-sm font-semibold tabular-nums">{v.label}</div>
+                <div className="text-[10px] text-muted mt-0.5">мл</div>
                 <div className={cn('text-base font-bold mt-0.5', selectedVolume === idx ? 'text-orange' : 'text-white')}>
                   {v.preorderPrice} ₽
                 </div>
@@ -215,7 +227,6 @@ export default function IpoDrinkPage({ params }: PageProps) {
             ))}
           </div>
 
-          {/* Info block */}
           <div className="flex items-start gap-3 bg-yellow-500/10 rounded-xl p-3">
             <Rocket size={16} className="text-yellow-400 mt-0.5 shrink-0" />
             <div className="text-xs text-yellow-200/80 leading-relaxed">
@@ -226,96 +237,44 @@ export default function IpoDrinkPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* CTA */}
         {user ? (
           <Button
             fullWidth
             size="lg"
-            onClick={() => setShowBuy(true)}
+            onClick={() => {
+              setBought(false);
+              setShowAddons(true);
+            }}
             className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold"
           >
             <ShoppingBag size={18} />
-            Предзаказать {vol.label} за {vol.preorderPrice} ₽
+            Предзаказать {vol.label} мл за {vol.preorderPrice} ₽
           </Button>
         ) : (
-          <div className="space-y-2">
-            <button
-              onClick={() => router.push('/auth/login')}
-              className="w-full flex items-center justify-center gap-2 bg-surface-el border border-border text-muted py-4 rounded-2xl text-sm"
-            >
-              <Lock size={16} />
-              Войдите, чтобы предзаказать
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => router.push('/auth/login')}
+            className="w-full flex items-center justify-center gap-2 bg-surface-el border border-border text-muted py-4 rounded-2xl text-sm"
+          >
+            <Lock size={16} />
+            Войдите, чтобы предзаказать
+          </button>
         )}
       </div>
 
-      {/* Preorder modal */}
-      <Modal
-        open={showBuy}
-        onClose={() => !buying && setShowBuy(false)}
-        title="Подтверждение предзаказа"
-      >
-        {bought ? (
-          <div className="flex flex-col items-center gap-4 py-6">
-            <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center">
-              <Check size={32} className="text-yellow-400" />
-            </div>
-            <p className="font-semibold text-lg">Предзаказ оформлен!</p>
-            <p className="text-muted text-sm text-center">
-              Купон добавлен в раздел Купоны. После старта продаж напиток будет доступен в кофейне.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            <div className="bg-surface-el rounded-2xl p-4 flex items-center gap-4">
-              {ipo.photoUrl ? (
-                <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0">
-                  <Image src={ipo.photoUrl} alt={ipo.name} fill className="object-cover" unoptimized sizes="56px" />
-                </div>
-              ) : (
-                <span className="text-3xl shrink-0">{categoryEmoji}</span>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate">{ipo.name}</div>
-                <div className="text-sm text-muted">{vol.label}</div>
-              </div>
-              <div className="text-xl font-bold shrink-0 text-orange">
-                {vol.preorderPrice} ₽
-              </div>
-            </div>
-
-            <div className="bg-yellow-500/10 rounded-xl p-3 text-xs text-yellow-200/80">
-              <span className="font-semibold text-yellow-400 block mb-1">Предзаказ по фиксированной цене</span>
-              Купон активируется после старта продаж. Рыночная цена может быть выше — ты уже зафиксировал свою.
-            </div>
-
-            <div className="border-t border-border pt-4">
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-muted">Напиток</span>
-                <span>{ipo.name} · {vol.label}</span>
-              </div>
-              <div className="flex justify-between font-semibold text-base">
-                <span>Итого</span>
-                <span className="text-orange">{vol.preorderPrice} ₽</span>
-              </div>
-            </div>
-
-            <Button
-              fullWidth
-              size="lg"
-              onClick={handlePreorder}
-              loading={buying}
-              className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold"
-            >
-              {buying ? 'Оформляем…' : 'Подтвердить предзаказ (демо)'}
-            </Button>
-            <p className="text-xs text-muted text-center -mt-2">
-              Это демо — купон будет создан без реальной оплаты
-            </p>
-          </div>
-        )}
-      </Modal>
+      <DrinkAddonsSheet
+        open={showAddons}
+        onClose={() => !buying && !bought && setShowAddons(false)}
+        drinkName={ipo.name}
+        volumeLabel={vol.label}
+        basePriceRub={vol.preorderPrice}
+        baseBeans={baseBeans}
+        currencySymbol={country.currencySymbol}
+        drinkNutrition={{ calories: 0, proteins: 0, fats: 0, carbs: 0 }}
+        onConfirm={confirmPreorder}
+        confirming={buying}
+        bought={bought}
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import Badge from '@/components/ui/Badge';
 import { cn, couponStatusLabel, couponStatusColor, formatDateTime, formatFullDate, daysUntil } from '@/lib/utils';
 import type { Coupon, CouponStatus } from '@/types';
 import { Ticket, Calendar, Clock, Rocket } from 'lucide-react';
+import Button from '@/components/ui/Button';
 
 const FILTERS: { value: 'all' | CouponStatus; label: string }[] = [
   { value: 'all', label: 'Все' },
@@ -167,7 +168,23 @@ export default function CouponsPage() {
               </div>
             </div>
 
-            {/* QR Code */}
+            {selected.purchaseSummary && (
+              <div className="rounded-2xl border border-border bg-surface-el p-4">
+                <p className="text-xs font-semibold text-muted mb-2">Состав заказа</p>
+                <p className="text-sm leading-relaxed whitespace-pre-line">{selected.purchaseSummary}</p>
+              </div>
+            )}
+
+            {selected.paymentMethod && (
+              <div className="flex justify-between text-sm px-1">
+                <span className="text-muted">Оплата</span>
+                <span>
+                  {selected.paymentMethod === 'card'
+                    ? 'Картой'
+                    : 'Бинами'}
+                </span>
+              </div>
+            )}
             <div className="flex justify-center">
               <div className="bg-white p-5 rounded-3xl">
                 <QRCodeSVG
@@ -204,6 +221,16 @@ export default function CouponsPage() {
             <p className="text-xs text-muted text-center">
               Купон действителен во всех кофейнях {country.name}
             </p>
+
+            <Button
+              type="button"
+              variant="secondary"
+              fullWidth
+              disabled
+              className="opacity-60 cursor-not-allowed"
+            >
+              Отправить заказ (скоро)
+            </Button>
           </div>
         )}
       </Modal>
