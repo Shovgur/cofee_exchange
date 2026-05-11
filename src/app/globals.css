@@ -147,9 +147,44 @@
   20%  { background-color: rgb(255 255 255 / 0.08); }
   100% { background-color: transparent; }
 }
-.price-flash-up      { animation: price-flash-up      0.7s ease-out forwards; border-radius: 0.5rem; }
-.price-flash-down    { animation: price-flash-down    0.7s ease-out forwards; border-radius: 0.5rem; }
-.price-flash-neutral { animation: price-flash-neutral 0.7s ease-out forwards; border-radius: 0.5rem; }
+.price-flash-up      { animation: price-flash-up      0.85s ease-out forwards; border-radius: 0.5rem; }
+.price-flash-down    { animation: price-flash-down    0.85s ease-out forwards; border-radius: 0.5rem; }
+.price-flash-neutral { animation: price-flash-neutral 0.85s ease-out forwards; border-radius: 0.5rem; }
+
+/* Индикатор «до обновления цен»: шиммер и заливка прогресса */
+@keyframes price-refresh-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+@keyframes price-refresh-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+.price-refresh-bar-fill {
+  background: linear-gradient(
+    90deg,
+    rgb(251 100 21 / 0.65),
+    rgb(255 200 120 / 0.95),
+    rgb(251 100 21 / 0.75),
+    rgb(255 160 80 / 0.9),
+    rgb(251 100 21 / 0.65)
+  );
+  background-size: 220% 100%;
+  animation: price-refresh-shimmer 2.4s linear infinite;
+  box-shadow: 0 0 14px rgb(251 100 21 / 0.35);
+}
+.price-refresh-bar-indeterminate {
+  width: 38%;
+  animation: price-refresh-indeterminate 1.15s ease-in-out infinite;
+}
 
 /* Вспышка на целой карточке напитка при обновлении цены */
 @keyframes tile-update-up {
@@ -170,6 +205,53 @@
 .tile-update-up      { animation: tile-update-up      1.1s ease-out forwards; }
 .tile-update-down    { animation: tile-update-down    1.1s ease-out forwards; }
 .tile-update-neutral { animation: tile-update-neutral 1.1s ease-out forwards; }
+
+/* TV-меню: чуть ярче обводка при смене цены (тёмная подложка карточки) */
+@keyframes tv-tile-update-up {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    border-color: rgb(255 255 255 / 0.08);
+  }
+  35% {
+    box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.4), 0 0 28px rgba(34, 197, 94, 0.2);
+    border-color: rgb(34 197 94 / 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    border-color: rgb(255 255 255 / 0.08);
+  }
+}
+@keyframes tv-tile-update-down {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    border-color: rgb(255 255 255 / 0.08);
+  }
+  35% {
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.42), 0 0 28px rgba(239, 68, 68, 0.18);
+    border-color: rgb(239 68 68 / 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    border-color: rgb(255 255 255 / 0.08);
+  }
+}
+@keyframes tv-tile-update-neutral {
+  0% {
+    box-shadow: 0 0 0 0 rgba(251, 100, 21, 0);
+    border-color: rgb(255 255 255 / 0.08);
+  }
+  35% {
+    box-shadow: 0 0 0 4px rgba(251, 100, 21, 0.35), 0 0 22px rgba(251, 100, 21, 0.12);
+    border-color: rgb(251 100 21 / 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(251, 100, 21, 0);
+    border-color: rgb(255 255 255 / 0.08);
+  }
+}
+.tv-tile-update-up      { animation: tv-tile-update-up      1.15s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.tv-tile-update-down    { animation: tv-tile-update-down    1.15s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.tv-tile-update-neutral { animation: tv-tile-update-neutral 1.15s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 
 
 /* Цена: pop + цвет при росте */
@@ -195,6 +277,28 @@
 .dp-price-up      { animation: dp-price-up      0.85s cubic-bezier(.22,.68,0,1.2) forwards; display: inline-block; }
 .dp-price-down    { animation: dp-price-down    0.85s cubic-bezier(.22,.68,0,1.2) forwards; display: inline-block; }
 .dp-price-neutral { animation: dp-price-neutral 0.6s  cubic-bezier(.22,.68,0,1.2) forwards; display: inline-block; }
+
+/* TV: цена крупнее — усиленный «поп» при обновлении */
+@keyframes tv-dp-price-up {
+  0%   { transform: scale(1); }
+  22%  { transform: scale(1.14); color: rgb(74 222 128); text-shadow: 0 0 18px rgb(34 197 94 / 0.55); }
+  55%  { transform: scale(1.08); color: rgb(74 222 128 / 0.85); }
+  100% { transform: scale(1); color: inherit; text-shadow: none; }
+}
+@keyframes tv-dp-price-down {
+  0%   { transform: scale(1); }
+  22%  { transform: scale(1.14); color: rgb(248 113 113); text-shadow: 0 0 18px rgb(239 68 68 / 0.55); }
+  55%  { transform: scale(1.08); color: rgb(248 113 113 / 0.85); }
+  100% { transform: scale(1); color: inherit; text-shadow: none; }
+}
+@keyframes tv-dp-price-neutral {
+  0%   { transform: scale(1); }
+  25%  { transform: scale(1.07); color: rgb(253 186 116); text-shadow: 0 0 14px rgb(251 100 21 / 0.35); }
+  100% { transform: scale(1); color: inherit; text-shadow: none; }
+}
+.tv-dp-price-up      { animation: tv-dp-price-up      0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards; display: inline-block; }
+.tv-dp-price-down    { animation: tv-dp-price-down    0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards; display: inline-block; }
+.tv-dp-price-neutral { animation: tv-dp-price-neutral 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; display: inline-block; }
 
 /* Значок процента: slide-in справа */
 @keyframes dp-pct-in {

@@ -13,6 +13,7 @@ import {
 import { useCountry } from "@/contexts/CountryContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePrices } from "@/contexts/PricesContext";
+import { PriceRefreshBanner } from "@/components/PriceRefreshBanner";
 import { cn, formatPriceChange, formatPrice } from "@/lib/utils";
 import type { Drink, DrinkCategory, PriceTrend, VolumePrice } from "@/types";
 import { mockBeansForDrinkPrice } from "@/lib/mock-data/drink-addons";
@@ -79,7 +80,17 @@ function VolumeCol({
     >
       <span className="text-[10px] text-muted mb-0.5">{vol.label}</span>
       <div className="flex flex-col items-center gap-0.5">
-        <span className="text-sm font-bold leading-tight">
+        <span
+          className={cn(
+            "text-sm font-bold leading-tight",
+            flashing &&
+              (vol.trend === "up"
+                ? "dp-price-up"
+                : vol.trend === "down"
+                  ? "dp-price-down"
+                  : "dp-price-neutral"),
+          )}
+        >
           {formatPrice(vol.price, currencySymbol)}
         </span>
         <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums text-amber-400/95">
@@ -202,7 +213,14 @@ function DrinkSkeleton() {
 export default function MenuPage() {
   const { country } = useCountry();
   const { user } = useAuth();
-  const { drinks, loading, error, flashMap, flashGen } = usePrices();
+  const {
+    drinks,
+    loading,
+    error,
+    flashMap,
+    flashGen,
+    secondsUntilNextPoll,
+  } = usePrices();
 
   const [category, setCategory] = useState<DrinkCategory | "all">("all");
 
@@ -260,6 +278,13 @@ export default function MenuPage() {
             <p className="text-xs lg:text-sm text-muted mt-0.5">
               {country.name} · {loading ? "…" : `${filtered.length} позиций`}
             </p>
+            <div className="mt-3">
+              <PriceRefreshBanner
+                variant="menu"
+                loading={loading}
+                secondsUntilNextPoll={secondsUntilNextPoll}
+              />
+            </div>
           </div>
         </div>
 

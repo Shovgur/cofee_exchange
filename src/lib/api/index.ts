@@ -75,12 +75,16 @@ export function parsePrice(s: string | undefined | null): number {
   return parseFloat(s) || 0;
 }
 
-export async function fetchAllPrices(): Promise<ApiPricesResponse> {
-  const url = buildApiPath("v1/prices");
+export async function fetchAllPrices(
+  signal?: AbortSignal,
+): Promise<ApiPricesResponse> {
+  const base = buildApiPath("v1/prices");
+  const url = `${base}${base.includes("?") ? "&" : "?"}_ts=${Date.now()}`;
   console.log("[API] fetchAllPrices →", url);
   const res = await fetch(url, {
     cache: "no-store",
     headers: { Accept: "application/json" },
+    signal,
   });
   console.log(
     "[API] fetchAllPrices ←",
