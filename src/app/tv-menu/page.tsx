@@ -52,12 +52,12 @@ export default function TvMenuPage() {
   const hasAny = drinks.length > 0;
 
   return (
-    <div className="min-h-[100dvh] bg-[#0a0a0b] text-white flex flex-col overflow-hidden">
+    <div className="min-h-[100dvh] bg-bg text-foreground flex flex-col overflow-hidden">
       {/* Верхняя плашка: бренд + регион + время */}
-      <header className="shrink-0 border-b border-white/10 bg-black/40 px-[clamp(1rem,3vw,2.5rem)] py-[clamp(0.75rem,2vw,1.25rem)] flex flex-col gap-[clamp(0.65rem,1.8vw,1rem)]">
+      <header className="shrink-0 border-b border-border bg-surface px-[clamp(1rem,3vw,2.5rem)] py-[clamp(0.75rem,2vw,1.25rem)] flex flex-col gap-[clamp(0.65rem,1.8vw,1rem)]">
         <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-center gap-[clamp(0.75rem,2vw,1.5rem)] min-w-0">
-          <div className="flex h-[clamp(2.5rem,6vw,4rem)] w-[clamp(2.5rem,6vw,4rem)] shrink-0 items-center justify-center rounded-2xl bg-orange/20 text-[clamp(1.25rem,3vw,2rem)]">
+          <div className="flex h-[clamp(2.5rem,6vw,4rem)] w-[clamp(2.5rem,6vw,4rem)] shrink-0 items-center justify-center rounded-2xl bg-orange/15 text-[clamp(1.25rem,3vw,2rem)]">
             ☕
           </div>
           <div className="min-w-0">
@@ -65,11 +65,11 @@ export default function TvMenuPage() {
               className="font-bold tracking-tight leading-none"
               style={{ fontSize: 'clamp(1.5rem, 4vw, 3rem)' }}
             >
-              <span className="text-white">Coffee</span>{' '}
+              <span className="text-foreground">Coffee</span>{' '}
               <span className="text-orange">Exchange</span>
             </h1>
             <p
-              className="text-white/50 mt-1 capitalize truncate"
+              className="text-muted mt-1 capitalize truncate"
               style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1.125rem)' }}
             >
               Меню · {country.flag} {country.name}
@@ -84,7 +84,7 @@ export default function TvMenuPage() {
             {formatClock(now)}
           </div>
           <div
-            className="text-white/45 capitalize"
+            className="text-muted capitalize"
             style={{ fontSize: 'clamp(0.7rem, 1.5vw, 1rem)' }}
           >
             {formatDate(now)}
@@ -100,7 +100,7 @@ export default function TvMenuPage() {
 
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-[clamp(1rem,3vw,2.5rem)] py-[clamp(0.75rem,2vw,1.5rem)]">
         {loading && (
-          <div className="h-full flex items-center justify-center text-white/40 text-xl">
+          <div className="h-full flex items-center justify-center text-muted text-xl">
             Загрузка меню…
           </div>
         )}
@@ -112,7 +112,7 @@ export default function TvMenuPage() {
         )}
 
         {!loading && !error && !hasAny && (
-          <div className="h-full flex items-center justify-center text-white/40 text-xl">
+          <div className="h-full flex items-center justify-center text-muted text-xl">
             Пока нет позиций
           </div>
         )}
@@ -139,13 +139,13 @@ export default function TvMenuPage() {
                       <article
                         key={flashTrend ? `${drink.id}-${flashGen}` : drink.id}
                         className={cn(
-                          'flex items-stretch gap-[clamp(0.5rem,1.5vw,1rem)] rounded-2xl border border-white/[0.08] bg-white/[0.04] p-[clamp(0.5rem,1.5vw,1rem)] transition-[border-color,box-shadow] duration-300',
+                          'flex items-stretch gap-[clamp(0.5rem,1.5vw,1rem)] rounded-2xl border border-border bg-surface p-[clamp(0.5rem,1.5vw,1rem)] transition-[border-color,box-shadow] duration-300',
                           flashTrend === 'up' && 'tv-tile-update-up',
                           flashTrend === 'down' && 'tv-tile-update-down',
                           flashTrend === 'neutral' && 'tv-tile-update-neutral',
                         )}
                       >
-                          <div className="relative h-[clamp(3.5rem,10vw,5.5rem)] w-[clamp(3.5rem,10vw,5.5rem)] shrink-0 rounded-xl overflow-hidden bg-white/5">
+                          <div className="relative h-[clamp(3.5rem,10vw,5.5rem)] w-[clamp(3.5rem,10vw,5.5rem)] shrink-0 rounded-xl overflow-hidden bg-surface-el">
                             {drink.photoUrl ? (
                               <Image
                                 src={drink.photoUrl}
@@ -164,7 +164,7 @@ export default function TvMenuPage() {
 
                           <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
                             <h3
-                              className="font-semibold text-white leading-tight line-clamp-2"
+                              className="font-semibold text-foreground leading-tight line-clamp-2"
                               style={{ fontSize: 'clamp(1rem, 2.4vw, 1.65rem)' }}
                             >
                               {drink.name}
@@ -173,17 +173,17 @@ export default function TvMenuPage() {
                               {drink.volumes.map((v) => (
                                 <div
                                   key={flashTrend ? `${v.value}-${flashGen}` : v.value}
-                                  className="flex items-baseline gap-2 text-white/85"
+                                  className="flex items-baseline gap-2 text-foreground"
                                 >
                                   <span
-                                    className="text-white/40"
+                                    className="text-muted"
                                     style={{ fontSize: 'clamp(0.65rem, 1.5vw, 1rem)' }}
                                   >
                                     {v.label}
                                   </span>
-                                  <span
+                                    <span
                                     className={cn(
-                                      'font-bold tabular-nums text-white',
+                                      'font-bold tabular-nums text-foreground',
                                       flashTrend === 'up' && 'tv-dp-price-up',
                                       flashTrend === 'down' && 'tv-dp-price-down',
                                       flashTrend === 'neutral' && 'tv-dp-price-neutral',
@@ -207,7 +207,7 @@ export default function TvMenuPage() {
         )}
       </main>
 
-      <footer className="shrink-0 border-t border-white/10 py-2.5 text-center text-white/30 text-[clamp(0.65rem,1.4vw,0.9rem)]">
+      <footer className="shrink-0 border-t border-border py-2.5 text-center text-muted text-[clamp(0.65rem,1.4vw,0.9rem)] bg-surface/80">
         Coffee Exchange · живые цены с биржи
       </footer>
     </div>

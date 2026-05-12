@@ -88,7 +88,7 @@ export default function MyCodeModal({
               value={qrPayload}
               size={200}
               bgColor="#FFFFFF"
-              fgColor="#0E0E0E"
+              fgColor="#2F241C"
               level="M"
             />
           </div>

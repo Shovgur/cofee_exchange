@@ -22,7 +22,7 @@ function Field({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.4fr] gap-1.5 sm:gap-4 items-start py-3 border-b border-border last:border-0">
       <div>
-        <div className="text-sm font-medium text-white">
+        <div className="text-sm font-medium text-foreground">
           {label}
           {required && <span className="text-danger ml-1">*</span>}
         </div>
@@ -55,7 +55,7 @@ function TextInput({
       placeholder={placeholder}
       onChange={e => onChange(e.target.value)}
       className={cn(
-        'w-full bg-surface-el border border-border rounded-xl px-3 py-2 text-sm text-white',
+        'w-full bg-surface-el border border-border rounded-xl px-3 py-2 text-sm text-foreground',
         'focus:outline-none focus:border-orange/60 transition-colors',
         disabled && 'opacity-50 cursor-not-allowed',
       )}
@@ -208,7 +208,7 @@ export default function AdminDrinkNewPage() {
           </Button>
           <button
             onClick={() => router.back()}
-            className="text-sm text-muted hover:text-white transition-colors"
+            className="text-sm text-muted hover:text-foreground transition-colors"
             disabled={saving}
           >
             Отмена

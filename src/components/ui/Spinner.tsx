@@ -11,7 +11,7 @@ export default function Spinner({ size = 'md', className }: Props) {
   return (
     <span
       className={cn(
-        'border-2 border-white/10 border-t-orange rounded-full animate-spin inline-block',
+        'border-2 border-foreground/10 border-t-orange rounded-full animate-spin inline-block',
         sizeMap[size],
         className,
       )}

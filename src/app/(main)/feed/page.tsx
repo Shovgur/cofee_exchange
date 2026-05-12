@@ -38,7 +38,7 @@ function IpoCard({ item, ipo }: { item: FeedItem; ipo: IpoDrink }) {
   const router = useRouter();
 
   return (
-    <article className="bg-surface rounded-2xl overflow-hidden border border-yellow-500/20">
+    <article className="bg-surface rounded-2xl overflow-hidden border border-orange/25">
       {item.imageUrl && (
         <div className="relative h-44 w-full bg-surface-el">
           <Image
@@ -52,7 +52,7 @@ function IpoCard({ item, ipo }: { item: FeedItem; ipo: IpoDrink }) {
           {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent" />
           {/* IPO badge */}
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-yellow-500/90 text-black text-xs font-bold px-2.5 py-1 rounded-full">
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-orange text-white text-xs font-bold px-2.5 py-1 rounded-full">
             <Rocket size={11} />
             IPO напитков
           </div>
@@ -76,14 +76,14 @@ function IpoCard({ item, ipo }: { item: FeedItem; ipo: IpoDrink }) {
         <div className="flex items-center gap-3 mt-3 mb-3">
           <div className="bg-surface-el rounded-xl px-3 py-1.5 text-sm">
             <span className="text-muted text-xs">Предзаказ </span>
-            <span className="font-bold text-orange">{ipo.preorderPrice} ₽</span>
+            <span className="font-bold text-foreground">{ipo.preorderPrice} ₽</span>
           </div>
           <span className="text-xs text-muted">фиксированная цена</span>
         </div>
 
         <button
           onClick={() => router.push(`/ipo/${ipo.id}`)}
-          className="w-full flex items-center justify-center gap-2 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 font-semibold text-sm py-2.5 rounded-xl transition-colors"
+          className="w-full flex items-center justify-center gap-2 bg-orange/12 hover:bg-orange/18 border border-orange/35 text-orange font-semibold text-sm py-2.5 rounded-xl transition-colors"
         >
           <Rocket size={14} />
           Подробнее и предзаказ
@@ -174,7 +174,7 @@ export default function FeedPage() {
               {user ? (
                 <div className="mt-3 space-y-1">
                   <p className="text-sm font-medium truncate">{user.name}</p>
-                  <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-amber-400/95">
+                  <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-orange">
                     <span>
                       {new Intl.NumberFormat("ru-RU").format(user.loyaltyPoints)}
                     </span>
@@ -202,9 +202,9 @@ export default function FeedPage() {
                   'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap border border-transparent',
                   filter === value
                     ? value === 'ipo'
-                      ? 'bg-yellow-500 text-black border-yellow-400/40'
+                      ? 'bg-orange text-white border-orange-dark/35'
                       : 'bg-orange text-white'
-                    : 'bg-surface-el text-muted hover:text-white',
+                    : 'bg-surface-el text-muted hover:text-foreground',
                 )}
               >
                 {value === 'ipo' && <Rocket size={12} className="inline mr-1" />}

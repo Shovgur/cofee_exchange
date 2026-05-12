@@ -52,7 +52,7 @@ export default function BottomNav() {
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-1 py-3 px-1',
                 'transition-colors duration-150',
-                isActive ? 'text-orange' : 'text-muted hover:text-white',
+                isActive ? 'text-orange' : 'text-muted hover:text-foreground',
               )}
             >
               <Icon

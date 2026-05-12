@@ -240,7 +240,7 @@ export default function DrinkHero3D({ drink }: Props) {
     <div className="relative">
       <div
         ref={containerRef}
-        className="relative h-52 w-full min-h-[13rem] cursor-grab touch-none active:cursor-grabbing bg-gradient-to-b from-[#1c1815] to-surface-el"
+        className="relative h-52 w-full min-h-[13rem] cursor-grab touch-none active:cursor-grabbing bg-gradient-to-b from-surface to-bg"
       />
       <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[10px] text-muted/90">
         Крутите пальцем

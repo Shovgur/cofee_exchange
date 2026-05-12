@@ -90,7 +90,7 @@ export default function NavigationProgress() {
       <div
         className="h-[3px] origin-left"
         style={{
-          background: 'linear-gradient(90deg, #FF6B35, #FF8C5A)',
+          background: 'linear-gradient(90deg, #E26402, #F07820)',
           width: `${progress}%`,
           transition: completing
             ? 'width 0.35s cubic-bezier(.4,0,.2,1), opacity 0.3s 0.15s'

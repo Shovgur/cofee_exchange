@@ -13,9 +13,9 @@ interface Props {
   center: [number, number];
 }
 
-/* Тёмная подложка на данных OSM (Carto); leaflet.css подключён из npm */
-const CARTO_DARK =
-  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+/* Светлая подложка OSM (Carto) под кремовую тему приложения */
+const CARTO_LIGHT =
+  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
 export default function MapView({ shops, onShopClick, center }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -142,7 +142,7 @@ export default function MapView({ shops, onShopClick, center }: Props) {
       resizeObserver = new ResizeObserver(scheduleInvalidate);
       resizeObserver.observe(el);
 
-      L.tileLayer(CARTO_DARK, {
+      L.tileLayer(CARTO_LIGHT, {
         subdomains: 'abcd',
         attribution: '',
         maxZoom: 19,
@@ -152,9 +152,9 @@ export default function MapView({ shops, onShopClick, center }: Props) {
         className: '',
         html: `<div style="
           width:36px;height:36px;border-radius:50% 50% 50% 0;
-          background:#FF6B35;transform:rotate(-45deg);
+          background:#E26402;transform:rotate(-45deg);
           display:flex;align-items:center;justify-content:center;
-          box-shadow:0 2px 10px rgba(255,107,53,0.6);border:2px solid white;
+          box-shadow:0 2px 10px rgba(226,100,2,0.55);border:2px solid #f0e4d8;
         "></div>`,
         iconSize: [36, 36],
         iconAnchor: [18, 36],
@@ -220,7 +220,7 @@ export default function MapView({ shops, onShopClick, center }: Props) {
           className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-surface/95 shadow-lg backdrop-blur-md transition-colors hover:bg-surface-el disabled:opacity-50"
         >
           {locating ? (
-            <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-orange" />
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-foreground/15 border-t-orange" />
           ) : hasLocation ? (
             <LocateFixed size={20} className="text-orange" />
           ) : (

@@ -23,7 +23,7 @@ export default function Loading() {
         />
         {/* Спиннер */}
         <span
-          className="w-10 h-10 rounded-full border-2 border-white/5 border-t-orange animate-spin"
+          className="w-10 h-10 rounded-full border-2 border-foreground/10 border-t-orange animate-spin"
           style={{ animationDuration: '0.75s' }}
         />
         {/* Эмодзи в центре */}

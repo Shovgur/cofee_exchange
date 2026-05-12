@@ -111,7 +111,7 @@ function FieldRow({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.2fr] gap-1.5 sm:gap-4 items-start py-3 border-b border-border last:border-0">
       <div>
-        <div className="text-sm font-medium text-white">{label}</div>
+        <div className="text-sm font-medium text-foreground">{label}</div>
         {hint && (
           <div className="text-[11px] text-muted mt-0.5 leading-snug">
             {hint}
@@ -145,7 +145,7 @@ function NumInput({
         readOnly || disabled ? undefined : (e) => onChange?.(e.target.value)
       }
       className={cn(
-        "w-full bg-surface-el border border-border rounded-xl px-3 py-2 text-sm text-white",
+        "w-full bg-surface-el border border-border rounded-xl px-3 py-2 text-sm text-foreground",
         "focus:outline-none focus:border-orange/60 transition-colors",
         (disabled || readOnly) && "opacity-60 cursor-not-allowed",
       )}
@@ -169,7 +169,7 @@ function MarketAvgBand({ data }: { data: ApiAdminRecalcResponse }) {
     <div className="space-y-2 pt-1">
       <p className="text-xs text-muted">
         Пересчитано позиций:{" "}
-        <span className="font-mono text-white">{data.recalculated}</span>
+        <span className="font-mono text-foreground">{data.recalculated}</span>
       </p>
       <div>
         <p className="text-[11px] text-muted mb-1.5">
@@ -318,7 +318,7 @@ export default function AdminPage() {
           <button
             onClick={loadAll}
             disabled={loading}
-            className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-white transition-colors disabled:opacity-40"
+            className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-foreground transition-colors disabled:opacity-40"
             title="Перезагрузить"
           >
             <RefreshCw size={16} className={cn(loading && "animate-spin")} />

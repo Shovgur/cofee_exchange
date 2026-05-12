@@ -124,7 +124,7 @@ function VerifyForm() {
         <h1 className="text-2xl font-bold mb-1">Введите код</h1>
         <p className="text-sm text-muted mb-2">
           Отправили SMS на номер{' '}
-          <span className="text-white font-medium">{phone}</span>
+          <span className="text-foreground font-medium">{phone}</span>
         </p>
         <p className="text-xs text-muted mb-8">
           Реального SMS нет — это демо. Введите любые 4 цифры, кроме 0000
@@ -143,7 +143,7 @@ function VerifyForm() {
               onKeyDown={(e) => handleKeyDown(i, e)}
               className={cn(
                 'w-16 h-16 rounded-2xl text-center text-2xl font-bold bg-surface border-2 outline-none transition-colors',
-                digits[i] ? 'border-orange text-white' : 'border-border text-muted',
+                digits[i] ? 'border-orange text-foreground' : 'border-border text-muted',
                 error && 'border-danger',
               )}
             />
@@ -165,7 +165,7 @@ function VerifyForm() {
         <div className="mt-6 text-center">
           {resendTimer > 0 ? (
             <p className="text-sm text-muted">
-              Повторно через <span className="text-white font-medium">{resendTimer}с</span>
+              Повторно через <span className="text-foreground font-medium">{resendTimer}с</span>
             </p>
           ) : (
             <button onClick={handleResend} className="text-sm text-orange font-medium">

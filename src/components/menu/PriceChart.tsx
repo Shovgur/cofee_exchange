@@ -27,7 +27,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: { payl
   return (
     <div className="bg-surface-el border border-border rounded-xl px-3 py-2 text-xs shadow-xl">
       <div className="text-muted mb-0.5">{formatChartTime(point.timestamp)}</div>
-      <div className="font-semibold text-white text-sm">
+      <div className="font-semibold text-foreground text-sm">
         {Math.round(point.price)} {payload[0].unit}
       </div>
     </div>
@@ -103,14 +103,14 @@ export default function PriceChart({ data, currencySymbol, basePrice }: Props) {
         >
           <defs>
             <linearGradient id={`priceGrad-${gradId}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#FF6B35" stopOpacity={0.35} />
-              <stop offset="100%" stopColor="#FF6B35" stopOpacity={0} />
+              <stop offset="0%" stopColor="#E26402" stopOpacity={0.35} />
+              <stop offset="100%" stopColor="#E26402" stopOpacity={0} />
             </linearGradient>
           </defs>
 
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="#2E2E2E"
+            stroke="#C4B09A"
             vertical={false}
           />
 
@@ -124,7 +124,7 @@ export default function PriceChart({ data, currencySymbol, basePrice }: Props) {
                 ? formatChartTime(v)
                 : ''
             }
-            tick={{ fill: '#888888', fontSize: 10 }}
+            tick={{ fill: '#6E5F54', fontSize: 10 }}
             tickLine={false}
             axisLine={false}
             interval="preserveStart"
@@ -132,7 +132,7 @@ export default function PriceChart({ data, currencySymbol, basePrice }: Props) {
 
           <YAxis
             domain={[minY, maxY]}
-            tick={{ fill: '#888888', fontSize: 10 }}
+            tick={{ fill: '#6E5F54', fontSize: 10 }}
             tickLine={false}
             axisLine={false}
             tickFormatter={(v) => String(Math.round(v))}
@@ -140,9 +140,9 @@ export default function PriceChart({ data, currencySymbol, basePrice }: Props) {
 
           <ReferenceLine
             y={basePrice}
-            stroke="#2E2E2E"
+            stroke="#C4B09A"
             strokeDasharray="4 4"
-            label={{ value: 'base', fill: '#555', fontSize: 10 }}
+            label={{ value: 'base', fill: '#6E5F54', fontSize: 10 }}
           />
 
           <Tooltip content={<CustomTooltip />} />
@@ -150,19 +150,19 @@ export default function PriceChart({ data, currencySymbol, basePrice }: Props) {
           <Area
             type="monotone"
             dataKey="price"
-            stroke="#FF6B35"
+            stroke="#E26402"
             strokeWidth={2}
             fill={`url(#priceGrad-${gradId})`}
             dot={false}
-            activeDot={{ r: 4, fill: '#FF6B35', stroke: '#0E0E0E', strokeWidth: 2 }}
+            activeDot={{ r: 4, fill: '#E26402', stroke: '#2F241C', strokeWidth: 2 }}
             unit={currencySymbol}
           />
 
           <Brush
             dataKey="timestamp"
             height={28}
-            stroke="#3f3f46"
-            fill="#1A1A1A"
+            stroke="#C4B09A"
+            fill="#D8C7B5"
             travellerWidth={8}
             tickFormatter={() => ''}
             startIndex={brushStart}

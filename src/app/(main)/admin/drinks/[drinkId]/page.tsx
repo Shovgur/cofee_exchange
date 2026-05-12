@@ -81,7 +81,7 @@ function Row({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.4fr] gap-1.5 sm:gap-4 items-start py-3 border-b border-border last:border-0">
       <div>
-        <div className="text-sm font-medium text-white">{label}</div>
+        <div className="text-sm font-medium text-foreground">{label}</div>
         {hint && (
           <div className="text-[11px] text-muted mt-0.5 leading-snug">
             {hint}
@@ -120,7 +120,7 @@ function Inp({
         readOnly || disabled ? undefined : (e) => onChange?.(e.target.value)
       }
       className={cn(
-        "w-full bg-surface-el border border-border rounded-xl px-3 py-2 text-sm text-white",
+        "w-full bg-surface-el border border-border rounded-xl px-3 py-2 text-sm text-foreground",
         "focus:outline-none focus:border-orange/60 transition-colors",
         (disabled || readOnly) && "opacity-60 cursor-not-allowed",
       )}
@@ -412,7 +412,7 @@ export default function AdminDrinkDetailPage({ params }: PageProps) {
           </div>
           <button
             onClick={() => load(true)}
-            className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-white transition-colors"
+            className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-foreground transition-colors"
             title="Обновить"
           >
             <RefreshCw size={15} />

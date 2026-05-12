@@ -40,8 +40,8 @@ export function PriceRefreshBanner({
       className={cn(
         "rounded-2xl border overflow-hidden shadow-lg",
         isTv
-          ? "border-orange/30 bg-gradient-to-br from-orange/[0.12] via-white/[0.04] to-transparent px-[clamp(0.85rem,2vw,1.25rem)] py-[clamp(0.75rem,2vw,1.1rem)]"
-          : "border-orange/25 bg-gradient-to-br from-orange/[0.08] via-surface-el/80 to-surface/90 px-3.5 py-3 lg:px-4 lg:py-3.5",
+          ? "border-orange/30 bg-gradient-to-br from-orange/[0.12] via-bg/80 to-surface-el/70 px-[clamp(0.85rem,2vw,1.25rem)] py-[clamp(0.75rem,2vw,1.1rem)]"
+          : "border-orange/25 bg-gradient-to-br from-orange/[0.12] via-surface-el/95 to-surface/90 px-3.5 py-3 lg:px-4 lg:py-3.5",
       )}
       role="status"
       aria-live="polite"
@@ -75,7 +75,7 @@ export function PriceRefreshBanner({
         <div className="min-w-0 flex-1 pt-0.5">
           <p
             className={cn(
-              "font-semibold text-white/90 leading-tight tracking-tight",
+              "font-semibold text-foreground/95 leading-tight tracking-tight",
               isTv
                 ? "text-[clamp(0.85rem,1.8vw,1.15rem)]"
                 : "text-sm lg:text-[0.95rem]",
@@ -88,7 +88,7 @@ export function PriceRefreshBanner({
             <>
               <p
                 className={cn(
-                  "text-white/45 mt-1",
+                  "text-muted mt-1",
                   isTv
                     ? "text-[clamp(0.7rem,1.5vw,0.95rem)]"
                     : "text-xs lg:text-sm",
@@ -97,10 +97,7 @@ export function PriceRefreshBanner({
                 Загружаем котировки…
               </p>
               <div
-                className={cn(
-                  "mt-2.5 h-1.5 rounded-full bg-black/30 overflow-hidden",
-                  !isTv && "bg-black/20",
-                )}
+                className="mt-2.5 h-1.5 rounded-full bg-foreground/10 overflow-hidden"
               >
                 <div className="price-refresh-bar-indeterminate h-full rounded-full bg-orange/50" />
               </div>
@@ -110,7 +107,7 @@ export function PriceRefreshBanner({
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 mt-1">
                 <span
                   className={cn(
-                    "text-white/50 tabular-nums",
+                    "text-muted tabular-nums",
                     isTv
                       ? "text-[clamp(0.7rem,1.5vw,0.95rem)]"
                       : "text-xs lg:text-sm",
@@ -128,7 +125,7 @@ export function PriceRefreshBanner({
                     damping: 28,
                   }}
                   className={cn(
-                    "font-bold text-orange tabular-nums drop-shadow-[0_0_12px_rgba(251,100,21,0.35)]",
+                    "font-bold text-orange tabular-nums drop-shadow-[0_0_12px_rgba(226,100,2,0.35)]",
                     isTv
                       ? "text-[clamp(1.75rem,4.5vw,3rem)] leading-none"
                       : "text-2xl lg:text-3xl leading-none",
@@ -138,7 +135,7 @@ export function PriceRefreshBanner({
                 </motion.span>
                 <span
                   className={cn(
-                    "text-white/50 font-medium tabular-nums",
+                    "text-muted font-medium tabular-nums",
                     isTv
                       ? "text-[clamp(0.85rem,2vw,1.2rem)]"
                       : "text-base lg:text-lg",
@@ -149,7 +146,7 @@ export function PriceRefreshBanner({
               </div>
               <p
                 className={cn(
-                  "text-white/40 mt-1.5",
+                  "text-muted mt-1.5",
                   isTv
                     ? "text-[clamp(0.65rem,1.35vw,0.88rem)]"
                     : "text-[11px] lg:text-xs",
@@ -163,7 +160,7 @@ export function PriceRefreshBanner({
       {showCountdown && (
         <div
           className={cn(
-            "mt-3 rounded-full bg-black/25 overflow-hidden",
+            "mt-3 rounded-full bg-foreground/10 overflow-hidden",
             isTv ? "h-[clamp(0.35rem,0.9vw,0.5rem)]" : "h-2",
           )}
         >

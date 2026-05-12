@@ -175,7 +175,7 @@ export default function IpoDrinkPage({ params }: PageProps) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20" />
               <div className="absolute bottom-4 left-4 right-4">
-                <div className="inline-flex items-center gap-1.5 bg-yellow-500/90 text-black text-xs font-bold px-2.5 py-1 rounded-full mb-2">
+                <div className="inline-flex items-center gap-1.5 bg-orange text-white text-xs font-bold px-2.5 py-1 rounded-full mb-2">
                   <Rocket size={11} />
                   IPO напитков
                 </div>
@@ -186,7 +186,7 @@ export default function IpoDrinkPage({ params }: PageProps) {
           ) : (
             <div className="p-5">
               <div className="text-4xl mb-3">{categoryEmoji}</div>
-              <div className="inline-flex items-center gap-1.5 bg-yellow-500/20 text-yellow-400 text-xs font-bold px-2.5 py-1 rounded-full mb-2">
+              <div className="inline-flex items-center gap-1.5 bg-orange/15 text-orange text-xs font-bold px-2.5 py-1 rounded-full mb-2">
                 <Rocket size={11} />
                 IPO напитков
               </div>
@@ -213,13 +213,13 @@ export default function IpoDrinkPage({ params }: PageProps) {
                 className={cn(
                   'rounded-xl p-3 text-center border transition-all',
                   selectedVolume === idx
-                    ? 'bg-orange/10 border-orange text-white'
+                    ? 'bg-orange/10 border-orange text-foreground'
                     : 'bg-surface-el border-transparent hover:border-border text-muted',
                 )}
               >
                 <div className="text-sm font-semibold tabular-nums">{v.label}</div>
                 <div className="text-[10px] text-muted mt-0.5">мл</div>
-                <div className={cn('text-base font-bold mt-0.5', selectedVolume === idx ? 'text-orange' : 'text-white')}>
+                <div className="text-base font-bold mt-0.5 tabular-nums text-foreground">
                   {v.preorderPrice} ₽
                 </div>
                 <div className="text-[10px] text-muted mt-0.5">фикс. цена</div>
@@ -227,10 +227,10 @@ export default function IpoDrinkPage({ params }: PageProps) {
             ))}
           </div>
 
-          <div className="flex items-start gap-3 bg-yellow-500/10 rounded-xl p-3">
-            <Rocket size={16} className="text-yellow-400 mt-0.5 shrink-0" />
-            <div className="text-xs text-yellow-200/80 leading-relaxed">
-              <span className="font-semibold text-yellow-400">Фиксированная цена</span> — ты платишь сейчас
+          <div className="flex items-start gap-3 bg-orange/10 rounded-xl p-3 border border-orange/20">
+            <Rocket size={16} className="text-orange mt-0.5 shrink-0" />
+            <div className="text-xs text-muted leading-relaxed">
+              <span className="font-semibold text-orange">Фиксированная цена</span> — ты платишь сейчас
               и получаешь купон по этой цене, даже если рыночная цена после старта продаж будет выше.
               После релиза напиток появится в меню по рыночной цене.
             </div>
@@ -245,7 +245,7 @@ export default function IpoDrinkPage({ params }: PageProps) {
               setBought(false);
               setShowAddons(true);
             }}
-            className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold"
+            className="font-bold"
           >
             <ShoppingBag size={18} />
             Предзаказать {vol.label} мл за {vol.preorderPrice} ₽

@@ -108,7 +108,7 @@ export default function AdminDrinksListPage() {
             <button
               onClick={load}
               disabled={loading}
-              className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-white transition-colors disabled:opacity-40"
+              className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-foreground transition-colors disabled:opacity-40"
               title="Обновить"
             >
               <RefreshCw size={16} className={cn(loading && 'animate-spin')} />
@@ -161,7 +161,7 @@ export default function AdminDrinksListPage() {
                 {isMulti && isNewGroup && (
                   <>
                     {i > 0 && <div className="h-px bg-border mx-5" role="presentation" />}
-                    <div className="px-5 pt-4 pb-2 text-sm font-semibold text-white tracking-tight">
+                    <div className="px-5 pt-4 pb-2 text-sm font-semibold text-foreground tracking-tight">
                       {d.name}
                     </div>
                   </>

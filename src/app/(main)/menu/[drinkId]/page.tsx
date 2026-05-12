@@ -251,14 +251,16 @@ export default function DrinkPage({ params }: PageProps) {
             <div className="p-5">
               <div className="flex items-start justify-between gap-4 mb-5">
                 <div className="min-w-0 flex-1 pr-1">
-                  <h1 className="text-xl font-bold leading-tight">{drink.name}</h1>
+                  <h1 className="text-xl font-bold leading-tight">
+                    {drink.name}
+                  </h1>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <div className="flex flex-col items-end gap-1">
                     <span
                       key={`price-rub-${animKey}`}
                       className={cn(
-                        "text-2xl font-bold leading-none tracking-tight whitespace-nowrap text-white",
+                        "text-2xl font-bold leading-none tracking-tight whitespace-nowrap text-foreground",
                         animTrend === "up" && animKey > 0
                           ? "dp-price-up"
                           : animTrend === "down" && animKey > 0
@@ -270,7 +272,7 @@ export default function DrinkPage({ params }: PageProps) {
                     >
                       {formatPrice(activeVol.price, country.currencySymbol)}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-lg font-semibold tabular-nums text-amber-400/95">
+                    <span className="inline-flex items-center gap-1 text-lg font-semibold tabular-nums text-orange">
                       {drinkBeans}
                       <CoffeeBeanIcon size={17} className="shrink-0" />
                     </span>
@@ -331,7 +333,7 @@ export default function DrinkPage({ params }: PageProps) {
           <div className="bg-surface rounded-3xl p-5 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-muted">За Бины</span>
-              <span className="inline-flex items-center gap-1.5 text-lg font-semibold tabular-nums text-amber-400/95">
+              <span className="inline-flex items-center gap-1.5 text-lg font-semibold tabular-nums text-orange">
                 {drinkBeans}
                 <CoffeeBeanIcon size={17} className="shrink-0" />
               </span>
@@ -352,8 +354,7 @@ export default function DrinkPage({ params }: PageProps) {
         <div
           className="lg:hidden fixed inset-x-0 z-[10035] px-4 pb-2 pointer-events-none"
           style={{
-            bottom:
-              "calc(5.25rem + env(safe-area-inset-bottom, 0px))",
+            bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))",
           }}
         >
           <div className="pointer-events-auto max-w-lg mx-auto">

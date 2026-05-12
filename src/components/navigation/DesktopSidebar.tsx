@@ -24,10 +24,10 @@ const ADMIN_NAV_ITEMS = [
 ];
 
 const LOYALTY_COLORS: Record<string, string> = {
-  Bronze: 'text-amber-500',
-  Silver: 'text-slate-400',
-  Gold: 'text-yellow-400',
-  Platinum: 'text-cyan-400',
+  Bronze: 'text-orange',
+  Silver: 'text-slate-600',
+  Gold: 'text-orange-dark',
+  Platinum: 'text-teal-700',
 };
 
 export default function DesktopSidebar() {
@@ -70,7 +70,7 @@ export default function DesktopSidebar() {
                   'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150',
                   isActive
                     ? 'bg-orange/15 text-orange'
-                    : 'text-muted hover:bg-surface-el hover:text-white',
+                    : 'text-muted hover:bg-surface-el hover:text-foreground',
                 )}
               >
                 <Icon
@@ -104,7 +104,7 @@ export default function DesktopSidebar() {
                   'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150',
                   isActive
                     ? 'bg-orange/15 text-orange'
-                    : 'text-muted hover:bg-surface-el hover:text-white',
+                    : 'text-muted hover:bg-surface-el hover:text-foreground',
                 )}
               >
                 <Icon
@@ -132,14 +132,14 @@ export default function DesktopSidebar() {
                   'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors',
                   pathname === '/profile'
                     ? 'bg-orange/15 text-orange'
-                    : 'hover:bg-surface-el text-muted hover:text-white',
+                    : 'hover:bg-surface-el text-muted hover:text-foreground',
                 )}
               >
                 <div className="w-7 h-7 rounded-lg bg-orange/20 flex items-center justify-center flex-shrink-0">
                   <User size={14} className="text-orange" />
                 </div>
                 <div className="flex-1 min-w-0 text-left">
-                  <div className="text-sm font-medium text-white truncate">{user.name}</div>
+                  <div className="text-sm font-medium text-foreground truncate">{user.name}</div>
                   <div className={cn('text-[11px] flex items-center gap-0.5', LOYALTY_COLORS[user.loyaltyLevel] ?? 'text-muted')}>
                     <Star size={9} fill="currentColor" />
                     {user.loyaltyLevel}

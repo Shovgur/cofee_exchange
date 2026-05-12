@@ -14,8 +14,8 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<Variant, string> = {
   primary: 'bg-orange text-white hover:bg-orange-dark active:scale-[0.97]',
-  secondary: 'bg-surface-el text-white hover:bg-surface-ov active:scale-[0.97]',
-  ghost: 'bg-transparent text-white hover:bg-white/5 active:scale-[0.97]',
+  secondary: 'bg-surface-el text-foreground hover:bg-surface-ov active:scale-[0.97]',
+  ghost: 'bg-transparent text-foreground hover:bg-foreground/5 active:scale-[0.97]',
   danger: 'bg-danger/10 text-danger hover:bg-danger/20 active:scale-[0.97]',
 };
 

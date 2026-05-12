@@ -230,7 +230,7 @@ export default function AdminSalesTestPage() {
             type="button"
             onClick={loadCatalog}
             disabled={catalogLoading}
-            className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-white transition-colors disabled:opacity-40 shrink-0"
+            className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-foreground transition-colors disabled:opacity-40 shrink-0"
             title="Обновить список напитков"
           >
             <RefreshCw
@@ -290,7 +290,7 @@ export default function AdminSalesTestPage() {
                   key={index}
                   className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-surface-el/50 p-3 sm:grid-cols-2 sm:gap-4 sm:p-4"
                 >
-                  <label className="block text-sm text-white sm:col-span-2">
+                  <label className="block text-sm text-foreground sm:col-span-2">
                     <span className="text-muted">Напиток</span>
                     <select
                       value={row.drinkKey}
@@ -308,7 +308,7 @@ export default function AdminSalesTestPage() {
                     </select>
                   </label>
 
-                  <label className="block text-sm text-white">
+                  <label className="block text-sm text-foreground">
                     <span className="text-muted">Объём</span>
                     <select
                       value={row.size_id}
@@ -325,7 +325,7 @@ export default function AdminSalesTestPage() {
                     </select>
                   </label>
 
-                  <label className="block text-sm text-white">
+                  <label className="block text-sm text-foreground">
                     <span className="text-muted">Количество</span>
                     <input
                       type="number"
@@ -395,7 +395,7 @@ export default function AdminSalesTestPage() {
             </label>
 
             {!soldAtNull && (
-              <label className="block text-sm text-white">
+              <label className="block text-sm text-foreground">
                 <span className="text-muted">Время продажи</span>
                 <input
                   value={soldAt}

@@ -59,9 +59,9 @@ export function trendColor(trend: PriceTrend): string {
 }
 
 export function trendBg(trend: PriceTrend): string {
-  if (trend === 'up') return 'bg-success/10 text-success';
-  if (trend === 'down') return 'bg-danger/10 text-danger';
-  return 'bg-white/5 text-muted';
+  if (trend === 'up') return 'bg-success/12 text-success ring-1 ring-inset ring-success/25';
+  if (trend === 'down') return 'bg-danger/12 text-danger ring-1 ring-inset ring-danger/25';
+  return 'bg-foreground/5 text-muted';
 }
 
 export function categoryLabel(cat: DrinkCategory): string {
@@ -90,7 +90,7 @@ export function feedTypeColor(type: FeedItemType): string {
     promotion: 'bg-orange/20 text-orange',
     event: 'bg-purple-500/20 text-purple-400',
     new_drink: 'bg-success/20 text-success',
-    ipo: 'bg-yellow-500/20 text-yellow-400',
+    ipo: 'bg-orange/15 text-orange border border-orange/20',
   };
   return map[type] ?? '';
 }

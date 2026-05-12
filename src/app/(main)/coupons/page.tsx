@@ -56,7 +56,7 @@ export default function CouponsPage() {
                   'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all',
                   filter === value
                     ? 'bg-orange text-white'
-                    : 'bg-surface-el text-muted hover:text-white',
+                    : 'bg-surface-el text-muted hover:text-foreground',
                 )}
               >
                 {label}
@@ -93,7 +93,7 @@ export default function CouponsPage() {
               <div className="flex items-start gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-surface-el flex items-center justify-center text-2xl flex-shrink-0">
                   {coupon.isPreorder
-                    ? <Rocket size={22} className="text-yellow-400" />
+                    ? <Rocket size={22} className="text-orange" />
                     : <DrinkEmoji category={coupon.category} />
                   }
                 </div>
@@ -102,7 +102,7 @@ export default function CouponsPage() {
                     <span className="font-semibold text-sm truncate">{coupon.drinkName}</span>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {coupon.isPreorder && (
-                        <Badge className="bg-yellow-500/20 text-yellow-400">Предзаказ</Badge>
+                        <Badge className="bg-orange/15 text-orange border border-orange/25">Предзаказ</Badge>
                       )}
                       <Badge className={couponStatusColor(coupon.status)}>
                         {couponStatusLabel(coupon.status)}
@@ -110,7 +110,7 @@ export default function CouponsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted">
-                    <span className="font-medium text-white">
+                    <span className="font-medium text-foreground">
                       {Math.round(coupon.purchasePrice)} {coupon.currencySymbol}
                       {coupon.volumeLabel && <span className="text-muted font-normal ml-1">· {coupon.volumeLabel}</span>}
                     </span>
@@ -120,7 +120,7 @@ export default function CouponsPage() {
                     </span>
                   </div>
                   {coupon.isPreorder && coupon.saleStartsAt && coupon.status === 'active' && (
-                    <div className="flex items-center gap-1 mt-1.5 text-xs text-yellow-400">
+                    <div className="flex items-center gap-1 mt-1.5 text-xs text-orange">
                       <Rocket size={11} />
                       <span>
                         Активируется{' '}
@@ -191,7 +191,7 @@ export default function CouponsPage() {
                   value={selected.qrData}
                   size={200}
                   bgColor="#FFFFFF"
-                  fgColor="#0E0E0E"
+                  fgColor="#2F241C"
                   level="M"
                 />
               </div>

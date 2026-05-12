@@ -92,7 +92,7 @@ function VolumeCol({
       <div className="flex flex-col items-center gap-0.5">
         <span
           className={cn(
-            "text-sm font-bold leading-tight",
+            "text-sm font-bold leading-tight text-foreground",
             flashing &&
               (vol.trend === "up"
                 ? "dp-price-up"
@@ -219,7 +219,7 @@ function DrinkSkeleton() {
 
 function SecretMenuPanel() {
   return (
-    <div className="rounded-2xl border border-orange/30 bg-[#1c1008] px-5 py-10 text-center">
+    <div className="rounded-2xl border border-orange/35 bg-surface-el px-5 py-10 text-center">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange/15">
         <Lock size={26} className="text-orange" />
       </div>
@@ -293,7 +293,7 @@ export default function MenuPage() {
                   <p className="text-sm font-medium leading-tight truncate">
                     {user.name}
                   </p>
-                  <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-amber-400/95">
+                  <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-orange">
                     <span>{formatBeans(user.loyaltyPoints)}</span>
                     <CoffeeBeanIcon size={16} className="shrink-0" />
                   </div>
@@ -308,7 +308,7 @@ export default function MenuPage() {
 
         <div
           className={cn(
-            "max-lg:sticky max-lg:top-0 z-[10025] shrink-0 w-full border-b border-border/60 max-lg:bg-bg bg-bg/95 px-4 lg:px-8 py-2.5 max-lg:shadow-[0_6px_20px_-12px_rgba(0,0,0,0.85)] lg:backdrop-blur-lg lg:shadow-none lg:supports-[backdrop-filter]:bg-bg/85 lg:static lg:z-auto",
+            "max-lg:sticky max-lg:top-0 z-[10025] shrink-0 w-full border-b border-border/60 max-lg:bg-bg bg-bg/95 px-4 lg:px-8 py-2.5 max-lg:shadow-[0_6px_20px_-12px_rgba(47,36,28,0.12)] lg:backdrop-blur-lg lg:shadow-none lg:supports-[backdrop-filter]:bg-bg/85 lg:static lg:z-auto",
           )}
         >
           <div className="flex gap-2 overflow-x-auto pb-0.5 no-select">
@@ -321,11 +321,11 @@ export default function MenuPage() {
                   "flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all border border-transparent",
                   category === value
                     ? value === "secret"
-                      ? "bg-[#1c1008] text-orange border-orange/35 shadow-[0_0_0_1px_rgba(251,100,21,0.25)]"
+                      ? "bg-surface-el text-orange border-orange/35 shadow-[0_0_0_1px_rgba(226,100,2,0.28)]"
                       : "bg-orange text-white"
                     : value === "secret"
-                      ? "bg-surface-el text-muted border-orange/15 hover:border-orange/30 hover:text-white"
-                      : "bg-surface-el text-muted hover:text-white",
+                      ? "bg-surface-el text-muted border-orange/15 hover:border-orange/30 hover:text-foreground"
+                      : "bg-surface-el text-muted hover:text-foreground",
                 )}
               >
                 <span>{emoji}</span>

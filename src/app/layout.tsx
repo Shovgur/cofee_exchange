@@ -19,14 +19,14 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'CoffeeX',
   },
   formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#FF6B35',
+  themeColor: '#E26402',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

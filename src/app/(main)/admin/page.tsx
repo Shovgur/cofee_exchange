@@ -65,7 +65,7 @@ export default function AdminHubPage() {
               <Icon size={22} className="text-orange" strokeWidth={1.9} />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="font-semibold text-white">{title}</div>
+              <div className="font-semibold text-foreground">{title}</div>
               <p className="mt-0.5 text-[13px] leading-snug text-muted sm:text-sm">
                 {description}
               </p>
