@@ -29,6 +29,15 @@ export interface DrinkAddonGroup {
 
 export const DRINK_ADDON_GROUPS: DrinkAddonGroup[] = [
   {
+    id: 'temperature',
+    title: 'Температура',
+    type: 'single',
+    options: [
+      { id: 't-hot', name: 'Горячий', priceRub: 0, priceBeans: 0 },
+      { id: 't-cold', name: 'Холодный', priceRub: 0, priceBeans: 0 },
+    ],
+  },
+  {
     id: 'milk',
     title: 'Молоко',
     type: 'single',
@@ -52,10 +61,9 @@ export const DRINK_ADDON_GROUPS: DrinkAddonGroup[] = [
   },
   {
     id: 'syrup',
-    title: 'Сироп',
-    type: 'single',
+    title: 'Сиропы',
+    type: 'multi',
     options: [
-      { id: 's-none', name: 'Без сиропа', priceRub: 0, priceBeans: 0 },
       {
         id: 's-vanilla',
         name: 'Ваниль',

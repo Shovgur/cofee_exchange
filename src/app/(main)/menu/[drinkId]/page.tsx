@@ -26,7 +26,10 @@ import DrinkAddonsSheet from "@/components/menu/DrinkAddonsSheet";
 import CoffeeBeanIcon from "@/components/ui/CoffeeBeanIcon";
 import dynamic from "next/dynamic";
 import type { Coupon, PriceTrend, VolumePrice } from "@/types";
-import { mockBeansForDrinkPrice } from "@/lib/mock-data/drink-addons";
+import {
+  mockBeansForDrinkPrice,
+  DRINK_ADDON_GROUPS,
+} from "@/lib/mock-data/drink-addons";
 
 const PriceChart = dynamic(() => import("@/components/menu/PriceChart"), {
   ssr: false,
@@ -46,12 +49,21 @@ interface PageProps {
   params: { drinkId: string };
 }
 
+/** Склонение прилагательного для молока */
+function milkAdjective(milkId: string): string {
+  const map: Record<string, string> = {
+    "m-regular": "обычном",
+    "m-oat": "овсяном",
+    "m-coconut": "кокосовом",
+  };
+  return map[milkId] ?? "обычном";
+}
+
 export default function DrinkPage({ params }: PageProps) {
   const router = useRouter();
   const { country } = useCountry();
   const { user, addCoupon } = useAuth();
 
-  // Берём цены из глобального контекста — тот же источник данных, что и список меню
   const { prices, loading, error, flashMap, flashGen } = usePrices();
 
   const drink = useMemo(() => {
@@ -69,14 +81,11 @@ export default function DrinkPage({ params }: PageProps) {
   const [bought, setBought] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(false);
 
-  // animKey меняется при каждом реальном изменении цены → React переприсваивает
-  // key элементам → CSS-анимация рестартует автоматически
   const [animKey, setAnimKey] = useState(0);
   const [animTrend, setAnimTrend] = useState<PriceTrend | null>(null);
   const isFirstRender = useRef(true);
 
   useEffect(() => {
-    // Пропускаем первый рендер — анимация только на реальных обновлениях
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
@@ -144,6 +153,10 @@ export default function DrinkPage({ params }: PageProps) {
     totalBeans: number;
     labels: string[];
     paymentMethod: "card" | "beans";
+    temperatureId: string;
+    milkId: string;
+    singleSel: Record<string, string>;
+    multiSel: string[];
   }) {
     if (!user || !drink) return;
     setBuying(true);
@@ -166,19 +179,55 @@ export default function DrinkPage({ params }: PageProps) {
       const expiresAt = new Date(
         Date.now() + 7 * 24 * 60 * 60 * 1000,
       ).toISOString();
-      const extras = payload.labels.length ? payload.labels.join(", ") : "";
-      const payLabel =
-        payload.paymentMethod === "card" ? "Оплата картой" : "Оплата Бинами";
+
+      // Build drink title with temperature prefix
+      const isCold = payload.temperatureId === "t-cold";
+      const drinkTitle = isCold ? `Айс ${drink.name}` : drink.name;
+
+      // Build milk line
+      const milkAdj = milkAdjective(payload.milkId);
+      const milkLine = `на ${milkAdj} молоке · ${activeVol.label} мл`;
+
+      // Build extras (syrups + other extras)
+      const syrupGroup = DRINK_ADDON_GROUPS.find((g) => g.id === "syrup");
+      const extrasGroup = DRINK_ADDON_GROUPS.find((g) => g.id === "extras");
+      const addonsLines: string[] = [];
+
+      if (syrupGroup) {
+        for (const o of syrupGroup.options) {
+          if (payload.multiSel.includes(o.id)) {
+            addonsLines.push(`сироп ${o.name.toLowerCase()}`);
+          }
+        }
+      }
+      if (extrasGroup) {
+        for (const o of extrasGroup.options) {
+          if (payload.multiSel.includes(o.id)) {
+            addonsLines.push(o.name.toLowerCase());
+          }
+        }
+      }
+
+      const addonsLine =
+        addonsLines.length > 0 ? addonsLines.join(", ") : null;
+
+      const totalLine =
+        payload.paymentMethod === "card"
+          ? `${Math.round(payload.totalRub)} ${country.currencySymbol}`
+          : `${payload.totalBeans} бинов`;
+
       const purchaseSummary = [
-        drink.name,
-        `Объём: ${activeVol.label} мл`,
-        extras ? `Добавки: ${extras}` : "Добавки: без добавок",
-        `Итого: ${Math.round(payload.totalRub)} ${country.currencySymbol} · ${payload.totalBeans} бинов`,
-        payLabel,
-      ].join("\n");
+        drinkTitle,
+        milkLine,
+        addonsLine,
+        totalLine,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
       const couponData: Omit<Coupon, "id"> = {
         drinkId: drink.id,
-        drinkName: drink.name,
+        drinkName: drinkTitle,
         category: drink.category,
         purchasePrice: payload.totalRub,
         currency: country.currency,
@@ -186,11 +235,9 @@ export default function DrinkPage({ params }: PageProps) {
         purchasedAt: soldAt,
         expiresAt,
         status: "active",
-        qrData: `CE:${drink.id}:${payload.totalRub}:${activeVol.value}:${country.id}:${Date.now()}:${payload.totalBeans}:${extras}`,
+        qrData: `CE:${drink.id}:${payload.totalRub}:${activeVol.value}:${country.id}:${Date.now()}:${payload.totalBeans}`,
         countryId: country.id,
-        volumeLabel: extras
-          ? `${activeVol.label} мл (${extras})`
-          : `${activeVol.label} мл`,
+        volumeLabel: `${activeVol.label} мл`,
         purchaseSummary,
         paymentMethod: payload.paymentMethod,
       };
@@ -207,7 +254,7 @@ export default function DrinkPage({ params }: PageProps) {
 
   return (
     <AuthGate fallbackMessage="Карточка напитка и возможность покупки доступны только авторизованным пользователям.">
-      <div className="pb-[calc(8rem+env(safe-area-inset-bottom,0px))] lg:pb-6">
+      <div className="pb-[calc(7rem+env(safe-area-inset-bottom,0px))] lg:pb-6">
         {/* Top bar */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <button
@@ -255,28 +302,8 @@ export default function DrinkPage({ params }: PageProps) {
                     {drink.name}
                   </h1>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-2">
-                  <div className="flex flex-col items-end gap-1">
-                    <span
-                      key={`price-rub-${animKey}`}
-                      className={cn(
-                        "text-2xl font-bold leading-none tracking-tight whitespace-nowrap text-foreground",
-                        animTrend === "up" && animKey > 0
-                          ? "dp-price-up"
-                          : animTrend === "down" && animKey > 0
-                            ? "dp-price-down"
-                            : animTrend === "neutral" && animKey > 0
-                              ? "dp-price-neutral"
-                              : "",
-                      )}
-                    >
-                      {formatPrice(activeVol.price, country.currencySymbol)}
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-lg font-semibold tabular-nums text-orange">
-                      {drinkBeans}
-                      <CoffeeBeanIcon size={17} className="shrink-0" />
-                    </span>
-                  </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  {/* Trend badge BEFORE price */}
                   <div
                     key={`pct-${animKey}`}
                     className={cn(
@@ -288,6 +315,26 @@ export default function DrinkPage({ params }: PageProps) {
                     <TrendIcon size={12} />
                     {formatPriceChange(activeVol.change)}
                   </div>
+                  {/* Price */}
+                  <span
+                    key={`price-rub-${animKey}`}
+                    className={cn(
+                      "text-2xl font-bold leading-none tracking-tight whitespace-nowrap text-foreground",
+                      animTrend === "up" && animKey > 0
+                        ? "dp-price-up"
+                        : animTrend === "down" && animKey > 0
+                          ? "dp-price-down"
+                          : animTrend === "neutral" && animKey > 0
+                            ? "dp-price-neutral"
+                            : "",
+                    )}
+                  >
+                    {formatPrice(activeVol.price, country.currencySymbol)}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-base font-semibold tabular-nums text-orange">
+                    {drinkBeans}
+                    <CoffeeBeanIcon size={15} className="shrink-0" />
+                  </span>
                 </div>
               </div>
 
@@ -317,7 +364,7 @@ export default function DrinkPage({ params }: PageProps) {
           {/* Chart */}
           <div className="bg-surface rounded-3xl p-4">
             <h2 className="text-sm font-semibold mb-3">
-              График цены · {activeVol.label} мл
+              График цены
             </h2>
             <PriceChart
               data={activeVol.priceHistory}
@@ -328,36 +375,32 @@ export default function DrinkPage({ params }: PageProps) {
               Перетащи нижний слайдер для зума
             </p>
           </div>
-
-          {/* Цена за бины и базовая — ниже графика */}
-          <div className="bg-surface rounded-3xl p-5 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-muted">За Бины</span>
-              <span className="inline-flex items-center gap-1.5 text-lg font-semibold tabular-nums text-orange">
-                {drinkBeans}
-                <CoffeeBeanIcon size={17} className="shrink-0" />
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-3 pt-1 border-t border-border/60">
-              <span className="text-sm text-muted">Базовая цена</span>
-              <span className="text-base font-semibold">
-                {formatPrice(
-                  activeVol.basePrice ?? drink.basePrice,
-                  country.currencySymbol,
-                )}
-              </span>
-            </div>
-          </div>
         </div>
 
-        {/* Фиксированная кнопка над нижней навигацией (мобильные) */}
+        {/* Fixed continue button with blur overlay (mobile) */}
         <div
-          className="lg:hidden fixed inset-x-0 z-[10035] px-4 pb-2 pointer-events-none"
+          className="lg:hidden fixed inset-x-0 z-[10035]"
           style={{
             bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))",
           }}
         >
-          <div className="pointer-events-auto max-w-lg mx-auto">
+          {/* Blur fade above button */}
+          <div
+            className="h-16 w-full pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(to bottom, transparent, var(--tw-shadow-color, #F0E4D8))",
+              backgroundImage:
+                "linear-gradient(to bottom, rgba(240,228,216,0), rgba(240,228,216,0.97))",
+              backdropFilter: "blur(2px)",
+              WebkitBackdropFilter: "blur(2px)",
+              maskImage:
+                "linear-gradient(to bottom, transparent 0%, black 100%)",
+              WebkitMaskImage:
+                "linear-gradient(to bottom, transparent 0%, black 100%)",
+            }}
+          />
+          <div className="pointer-events-auto px-4 max-w-lg mx-auto bg-bg pb-2">
             <Button
               fullWidth
               size="lg"
@@ -366,21 +409,7 @@ export default function DrinkPage({ params }: PageProps) {
                 setShowAddons(true);
               }}
             >
-              <span className="flex flex-col items-center gap-0.5">
-                <span className="font-semibold">Продолжить</span>
-                <span className="text-xs font-normal opacity-90 inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
-                  <span>{activeVol.label} мл</span>
-                  <span>·</span>
-                  <span>
-                    {formatPrice(activeVol.price, country.currencySymbol)}
-                  </span>
-                  <span>·</span>
-                  <span className="inline-flex items-center gap-0.5 tabular-nums">
-                    {drinkBeans}
-                    <CoffeeBeanIcon size={14} className="shrink-0" />
-                  </span>
-                </span>
-              </span>
+              Продолжить
             </Button>
           </div>
         </div>
@@ -394,21 +423,7 @@ export default function DrinkPage({ params }: PageProps) {
               setShowAddons(true);
             }}
           >
-            <span className="flex flex-col items-center gap-0.5">
-              <span className="font-semibold">Продолжить</span>
-              <span className="text-xs font-normal opacity-90 inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
-                <span>{activeVol.label} мл</span>
-                <span>·</span>
-                <span>
-                  {formatPrice(activeVol.price, country.currencySymbol)}
-                </span>
-                <span>·</span>
-                <span className="inline-flex items-center gap-0.5 tabular-nums">
-                  {drinkBeans}
-                  <CoffeeBeanIcon size={14} className="shrink-0" />
-                </span>
-              </span>
-            </span>
+            Продолжить
           </Button>
         </div>
       </div>

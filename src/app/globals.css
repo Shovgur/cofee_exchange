@@ -74,7 +74,7 @@
 
   /* нижний отступ под «домашнюю» полоску iPhone — только padding, не отдельный блок */
   .pb-nav-safe {
-    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
   }
 
   /* Высота home indicator: constant() для старых Safari, env() для новых */

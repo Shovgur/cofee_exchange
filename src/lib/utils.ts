@@ -61,7 +61,7 @@ export function trendColor(trend: PriceTrend): string {
 export function trendBg(trend: PriceTrend): string {
   if (trend === 'up') return 'bg-success/12 text-success ring-1 ring-inset ring-success/25';
   if (trend === 'down') return 'bg-danger/12 text-danger ring-1 ring-inset ring-danger/25';
-  return 'bg-foreground/5 text-muted';
+  return 'bg-foreground/5 text-muted ring-1 ring-inset ring-foreground/15';
 }
 
 export function categoryLabel(cat: DrinkCategory): string {

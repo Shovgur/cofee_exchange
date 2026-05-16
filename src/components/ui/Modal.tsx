@@ -46,7 +46,8 @@ export default function Modal({ open, onClose, title, children, className }: Pro
         aria-modal="true"
         className={cn(
           'relative w-full max-w-lg bg-surface p-6 pb-8 safe-pb',
-          'max-h-[90dvh] overflow-y-auto shadow-2xl',
+          /* limit height so it never reaches the notch */
+          'max-h-[min(90dvh,calc(100dvh-env(safe-area-inset-top,44px)-0.5rem))] overflow-y-auto shadow-2xl',
           /* mobile: sheet from bottom */
           'rounded-t-3xl',
           /* desktop: card in center */

@@ -142,7 +142,6 @@ export default function PriceChart({ data, currencySymbol, basePrice }: Props) {
             y={basePrice}
             stroke="#C4B09A"
             strokeDasharray="4 4"
-            label={{ value: 'base', fill: '#6E5F54', fontSize: 10 }}
           />
 
           <Tooltip content={<CustomTooltip />} />

@@ -14,7 +14,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePrices } from "@/contexts/PricesContext";
 import { cn, formatPriceChange, formatPrice } from "@/lib/utils";
 import type { Drink, DrinkCategory, PriceTrend, VolumePrice } from "@/types";
-import CoffeeBeanIcon from "@/components/ui/CoffeeBeanIcon";
 
 type MenuTab = DrinkCategory | "all" | "secret";
 
@@ -56,9 +55,6 @@ function TrendArrow({ trend }: { trend: PriceTrend }) {
   return <Minus size={11} className="text-muted shrink-0" />;
 }
 
-function formatBeans(n: number) {
-  return new Intl.NumberFormat("ru-RU").format(n);
-}
 
 function VolumeCol({
   vol,
@@ -272,39 +268,11 @@ export default function MenuPage() {
     if (items.length > 0) groups.push({ key, items });
   }
 
-  const positionsLabel =
-    category === "secret"
-      ? "Скоро"
-      : loading
-        ? "…"
-        : `${filtered.length} позиций`;
-
   return (
     <div className="flex w-full flex-1 min-h-0 flex-col lg:flex-none lg:min-h-full">
       {/* Прокрутка только у <main>; вложенный overflow-y ломал sticky табов */}
       <div className="flex w-full flex-col">
-        {/* Шапка — уходит при скролле */}
-        <div className="shrink-0 px-4 lg:px-8 pt-4 lg:pt-8 pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-xl lg:text-3xl font-bold">Меню</h1>
-              {user ? (
-                <div className="mt-2 space-y-1">
-                  <p className="text-sm font-medium leading-tight truncate">
-                    {user.name}
-                  </p>
-                  <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-orange">
-                    <span>{formatBeans(user.loyaltyPoints)}</span>
-                    <CoffeeBeanIcon size={16} className="shrink-0" />
-                  </div>
-                </div>
-              ) : null}
-            </div>
-            <div className="shrink-0 text-right pt-0.5">
-              <p className="text-xs text-muted tabular-nums">{positionsLabel}</p>
-            </div>
-          </div>
-        </div>
+        {/* Шапка убрана — только табы */}
 
         <div
           className={cn(
@@ -335,7 +303,7 @@ export default function MenuPage() {
           </div>
         </div>
 
-        <div className="shrink-0 px-4 lg:px-8 pb-8 space-y-6 pt-4">
+        <div className="shrink-0 px-4 lg:px-8 pb-nav-safe space-y-6 pt-4 lg:pb-8">
           {category === "secret" ? (
             <SecretMenuPanel />
           ) : (

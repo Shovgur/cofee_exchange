@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
 import AuthGate from '@/components/auth/AuthGate';
@@ -10,7 +9,6 @@ import Badge from '@/components/ui/Badge';
 import { cn, couponStatusLabel, couponStatusColor, formatDateTime, formatFullDate, daysUntil } from '@/lib/utils';
 import type { Coupon, CouponStatus } from '@/types';
 import { Ticket, Calendar, Clock, Rocket } from 'lucide-react';
-import Button from '@/components/ui/Button';
 
 const FILTERS: { value: 'all' | CouponStatus; label: string }[] = [
   { value: 'all', label: 'Все' },
@@ -23,6 +21,35 @@ function DrinkEmoji({ category }: { category: string }) {
   if (category === 'coffee') return <>☕</>;
   if (category === 'lemonade') return <>🍋</>;
   return <>🍵</>;
+}
+
+/** Static barcode generated deterministically from a string value */
+function StaticBarcode({ value }: { value: string }) {
+  const seed = value.split('').reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), 0);
+  const bars: { width: number; height: number }[] = [];
+  for (let i = 0; i < 56; i++) {
+    const v = Math.abs(Math.sin(seed + i * 2.3)) * 100;
+    bars.push({
+      width: 1 + Math.round(v % 3),
+      height: 32 + Math.round((Math.abs(Math.cos(seed + i * 1.1)) * 100) % 24),
+    });
+  }
+  return (
+    <div className="bg-white rounded-2xl p-5 flex flex-col items-center gap-3">
+      <div className="flex items-end gap-[1.5px] h-14">
+        {bars.map((b, i) => (
+          <div
+            key={i}
+            className="rounded-[1px] bg-neutral-900"
+            style={{ width: `${b.width}px`, height: `${b.height}px` }}
+          />
+        ))}
+      </div>
+      <p className="font-mono text-xs tracking-widest text-neutral-700 tabular-nums">
+        {value.replace(/[^A-Z0-9]/gi, '').slice(0, 16).toUpperCase().replace(/(.{4})/g, '$1 ').trim()}
+      </p>
+    </div>
+  );
 }
 
 export default function CouponsPage() {
@@ -39,7 +66,7 @@ export default function CouponsPage() {
     <AuthGate fallbackMessage="Ваши купоны доступны только после входа в аккаунт.">
       <div>
         {/* Header */}
-        <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-md pt-4 pb-2 px-4 lg:px-8 lg:pt-8">
+        <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-md pt-4 pb-2 px-4 lg:px-8 lg:pt-8 shadow-[0_1px_0_0_rgba(196,176,154,0.4)]">
           <div className="flex items-baseline justify-between mb-4">
             <h1 className="text-xl lg:text-3xl font-bold">Купоны</h1>
             <span className="text-xs bg-orange/20 text-orange px-2.5 py-1 rounded-full font-medium">
@@ -65,7 +92,7 @@ export default function CouponsPage() {
           </div>
         </div>
 
-        <div className="px-4 lg:px-8 pt-2 pb-8 grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="px-4 lg:px-8 pt-2 pb-nav-safe lg:pb-8 grid grid-cols-1 lg:grid-cols-2 gap-3">
           {visible.length === 0 && (
             <div className="lg:col-span-2 flex flex-col items-center gap-4 py-16 text-center">
               <Ticket size={40} className="text-muted" />
@@ -148,7 +175,7 @@ export default function CouponsPage() {
         </div>
       </div>
 
-      {/* QR Modal */}
+      {/* Coupon detail modal */}
       <Modal
         open={!!selected}
         onClose={() => setSelected(null)}
@@ -156,18 +183,6 @@ export default function CouponsPage() {
       >
         {selected && (
           <div className="space-y-5">
-            <div className="flex items-center gap-3 bg-surface-el rounded-2xl p-4">
-              <span className="text-3xl">
-                <DrinkEmoji category={selected.category} />
-              </span>
-              <div>
-                <div className="font-semibold">{selected.drinkName}</div>
-                <div className="text-sm text-muted">
-                  {Math.round(selected.purchasePrice)} {selected.currencySymbol}
-                </div>
-              </div>
-            </div>
-
             {selected.purchaseSummary && (
               <div className="rounded-2xl border border-border bg-surface-el p-4">
                 <p className="text-xs font-semibold text-muted mb-2">Состав заказа</p>
@@ -175,30 +190,10 @@ export default function CouponsPage() {
               </div>
             )}
 
-            {selected.paymentMethod && (
-              <div className="flex justify-between text-sm px-1">
-                <span className="text-muted">Оплата</span>
-                <span>
-                  {selected.paymentMethod === 'card'
-                    ? 'Картой'
-                    : 'Бинами'}
-                </span>
-              </div>
-            )}
-            <div className="flex justify-center">
-              <div className="bg-white p-5 rounded-3xl">
-                <QRCodeSVG
-                  value={selected.qrData}
-                  size={200}
-                  bgColor="#FFFFFF"
-                  fgColor="#2F241C"
-                  level="M"
-                />
-              </div>
-            </div>
+            <StaticBarcode value={selected.qrData} />
 
             <p className="text-center text-sm text-muted">
-              Покажите QR-код кассиру для получения напитка
+              Покажите штрихкод кассиру для получения напитка
             </p>
 
             <div className="bg-surface-el rounded-2xl p-4 space-y-2 text-sm">
@@ -221,16 +216,6 @@ export default function CouponsPage() {
             <p className="text-xs text-muted text-center">
               Купон действителен во всех кофейнях {country.name}
             </p>
-
-            <Button
-              type="button"
-              variant="secondary"
-              fullWidth
-              disabled
-              className="opacity-60 cursor-not-allowed"
-            >
-              Отправить заказ (скоро)
-            </Button>
           </div>
         )}
       </Modal>

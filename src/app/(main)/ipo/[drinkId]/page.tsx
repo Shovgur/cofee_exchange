@@ -150,7 +150,7 @@ export default function IpoDrinkPage({ params }: PageProps) {
     ipo.category === 'coffee' ? '☕' : ipo.category === 'lemonade' ? '🍋' : '🍵';
 
   return (
-    <div className="pb-8">
+    <div className="pb-nav-safe lg:pb-8">
       <div className="flex items-center px-4 pt-4 pb-2">
         <button
           onClick={() => router.back()}

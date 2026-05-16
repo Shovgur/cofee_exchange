@@ -14,7 +14,6 @@ import {
   Globe,
   Shield,
   Trophy,
-  Barcode,
   History,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,7 +22,6 @@ import AuthGate from '@/components/auth/AuthGate';
 import CountrySelector from '@/components/country/CountrySelector';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
-import MyCodeModal from '@/components/profile/MyCodeModal';
 import CoffeeBeanIcon from '@/components/ui/CoffeeBeanIcon';
 import { formatDateTime, cn } from '@/lib/utils';
 
@@ -54,6 +52,34 @@ function NotificationItem({ title, subtitle, enabled, onToggle }: {
   );
 }
 
+function ProfileBarcode({ value }: { value: string }) {
+  const bars = useMemo(() => {
+    const seed = value.split('').reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), 0);
+    return Array.from({ length: 52 }, (_, i) => ({
+      width: 1 + Math.round(Math.abs(Math.sin(seed + i * 2.3)) * 100 % 3),
+      height: 28 + Math.round(Math.abs(Math.cos(seed + i * 1.1)) * 100 % 22),
+    }));
+  }, [value]);
+
+  const displayCode = value.replace(/\D/g, '').slice(-12).replace(/(.{4})/g, '$1 ').trim();
+
+  return (
+    <div className="bg-white rounded-2xl px-5 py-4 flex flex-col items-center gap-2">
+      <div className="flex items-end gap-[1.5px] h-12">
+        {bars.map((b, i) => (
+          <div
+            key={i}
+            className="rounded-[1px] bg-neutral-900"
+            style={{ width: `${b.width}px`, height: `${b.height}px` }}
+          />
+        ))}
+      </div>
+      <p className="font-mono text-xs tracking-[0.18em] text-neutral-600 tabular-nums">
+        {displayCode || '0000 0000 0000'}
+      </p>
+    </div>
+  );
+}
 
 export default function ProfilePage() {
   const { user, logout, coupons } = useAuth();
@@ -63,7 +89,7 @@ export default function ProfilePage() {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showCountry, setShowCountry] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
-  const [showMyCode, setShowMyCode] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [notifSettings, setNotifSettings] = useState({
     priceAlerts: true,
     promotions: true,
@@ -71,17 +97,13 @@ export default function ProfilePage() {
     orderStatus: true,
   });
 
-  const barcodeDisplay = useMemo(() => {
-    if (!user) return '1234 5678';
+  const barcodeValue = useMemo(() => {
+    if (!user) return '000000000000';
     const d = user.phone.replace(/\D/g, '');
-    const tail = (d.slice(-8) || user.id.replace(/\D/g, '').slice(-8)).padStart(8, '0');
-    return `${tail.slice(0, 4)} ${tail.slice(4)}`;
+    return (d.slice(-12) || user.id.replace(/\D/g, '').slice(-12)).padStart(12, '0');
   }, [user]);
 
-  const qrPayload = useMemo(
-    () => (user ? `CE:USER:${user.id}:${user.phone}` : ''),
-    [user],
-  );
+  const userCoupons = coupons.filter((c) => c.countryId === country.id);
 
   function toggleNotif(key: keyof typeof notifSettings) {
     setNotifSettings((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -90,10 +112,11 @@ export default function ProfilePage() {
   return (
     <AuthGate fallbackMessage="Войдите в аккаунт, чтобы видеть профиль, историю покупок и настройки.">
       {user && (
-        <div className="pb-6 max-w-2xl lg:mx-8 lg:pt-8 w-full">
+        <div className="pb-nav-safe max-w-2xl lg:mx-8 lg:pt-8 lg:pb-6 w-full">
           {/* Header */}
-          <div className="px-4 pt-6 pb-5 lg:px-0">
-            <div className="flex items-center gap-4 mb-5">
+          <div className="px-4 pt-6 pb-5 lg:px-0 space-y-4">
+            {/* User info */}
+            <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-orange/20 flex items-center justify-center flex-shrink-0">
                 <User size={28} className="text-orange" />
               </div>
@@ -103,23 +126,10 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowMyCode(true)}
-              className="w-full flex items-center gap-4 bg-surface rounded-2xl p-4 mb-3 border border-border hover:bg-surface-el transition-colors text-left"
-            >
-              <div className="w-12 h-12 rounded-xl bg-orange/15 flex items-center justify-center flex-shrink-0">
-                <Barcode size={22} className="text-orange" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-semibold">Мой код</div>
-                <div className="text-xs text-muted mt-0.5">
-                  Штрихкод для начисления Бинов
-                </div>
-              </div>
-              <ChevronRight size={18} className="text-muted shrink-0" />
-            </button>
+            {/* Barcode under user info */}
+            <ProfileBarcode value={barcodeValue} />
 
+            {/* 3-column stats */}
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-surface rounded-2xl p-3 text-center border border-border">
                 <div className="text-lg font-bold text-orange tabular-nums">
@@ -130,16 +140,16 @@ export default function ProfilePage() {
                   <CoffeeBeanIcon size={12} className="shrink-0" />
                 </div>
               </div>
+
               <button
                 type="button"
-                onClick={() =>
-                  document.getElementById('profile-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                }
+                onClick={() => setShowHistory(true)}
                 className="bg-surface rounded-2xl p-3 text-center border border-border hover:bg-surface-el transition-colors flex flex-col items-center justify-center gap-1 min-h-[5.25rem]"
               >
                 <History size={18} className="text-orange" />
                 <span className="text-xs font-medium leading-tight">История</span>
               </button>
+
               <div className="bg-surface rounded-2xl p-3 text-center border border-border opacity-55 flex flex-col items-center justify-center gap-1 min-h-[5.25rem]">
                 <Trophy size={18} className="text-muted" />
                 <span className="text-[11px] font-medium leading-tight text-muted">
@@ -152,36 +162,7 @@ export default function ProfilePage() {
 
           {/* Sections */}
           <div className="px-4 lg:px-0 space-y-3">
-            {/* History */}
-            <div id="profile-history" className="bg-surface rounded-2xl overflow-hidden scroll-mt-24">
-              <div className="px-4 py-3 border-b border-border">
-                <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">История</h2>
-              </div>
-              {coupons.filter((c) => c.countryId === country.id).slice(0, 5).length === 0 ? (
-                <div className="px-4 py-4 text-sm text-muted">Нет покупок</div>
-              ) : (
-                <div>
-                  {coupons.filter((c) => c.countryId === country.id).slice(0, 5).map((coupon) => (
-                    <div key={coupon.id} className="flex items-center justify-between px-4 py-3 border-b border-border/50 last:border-0">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">
-                          {coupon.category === 'coffee' ? '☕' : coupon.category === 'lemonade' ? '🍋' : '🍵'}
-                        </span>
-                        <div>
-                          <div className="text-sm font-medium">{coupon.drinkName}</div>
-                          <div className="text-xs text-muted">{formatDateTime(coupon.purchasedAt)}</div>
-                        </div>
-                      </div>
-                      <span className="text-sm font-medium">
-                        {Math.round(coupon.purchasePrice)} {coupon.currencySymbol}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Menu items */}
+            {/* Account menu */}
             <div className="bg-surface rounded-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-border">
                 <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Аккаунт</h2>
@@ -281,12 +262,31 @@ export default function ProfilePage() {
         </div>
       )}
 
-      <MyCodeModal
-        open={showMyCode && !!user}
-        onClose={() => setShowMyCode(false)}
-        displayCode={barcodeDisplay}
-        qrPayload={qrPayload}
-      />
+      {/* History modal */}
+      <Modal open={showHistory} onClose={() => setShowHistory(false)} title="История покупок">
+        {userCoupons.length === 0 ? (
+          <p className="text-sm text-muted text-center py-6">Нет покупок</p>
+        ) : (
+          <div className="divide-y divide-border/60 -mx-6 px-6">
+            {userCoupons.slice(0, 20).map((coupon) => (
+              <div key={coupon.id} className="flex items-center justify-between py-3 gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl shrink-0">
+                    {coupon.category === 'coffee' ? '☕' : coupon.category === 'lemonade' ? '🍋' : '🍵'}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate">{coupon.drinkName}</div>
+                    <div className="text-xs text-muted">{formatDateTime(coupon.purchasedAt)}</div>
+                  </div>
+                </div>
+                <span className="text-sm font-semibold shrink-0">
+                  {Math.round(coupon.purchasePrice)} {coupon.currencySymbol}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
 
       {/* Notifications modal */}
       <Modal open={showNotifs} onClose={() => setShowNotifs(false)} title="Уведомления">

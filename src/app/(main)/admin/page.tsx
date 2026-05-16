@@ -33,7 +33,7 @@ const SECTIONS = [
 
 export default function AdminHubPage() {
   return (
-    <div className="min-h-full pb-8 sm:pb-12">
+    <div className="min-h-full pb-nav-safe lg:pb-8 sm:pb-12">
       <div className="border-b border-border bg-bg/95 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-4 backdrop-blur-md sm:px-4 lg:px-8 lg:pt-8">
         <div className="mx-auto flex max-w-3xl items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange/15">

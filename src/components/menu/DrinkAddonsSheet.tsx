@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check } from "lucide-react";
+import { X, Check, CreditCard } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import {
   DRINK_ADDON_GROUPS,
@@ -118,6 +118,10 @@ interface Props {
     totalBeans: number;
     labels: string[];
     paymentMethod: "card" | "beans";
+    temperatureId: string;
+    milkId: string;
+    singleSel: Record<string, string>;
+    multiSel: string[];
   }) => void;
   confirming: boolean;
   bought: boolean;
@@ -141,7 +145,10 @@ export default function DrinkAddonsSheet({
     defaultSingleSelection,
   );
   const [multiSel, setMultiSel] = useState<Set<string>>(defaultMultiSelection);
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "beans">("card");
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "beans" | null>(
+    null,
+  );
+  const [activeTab, setActiveTab] = useState<string>(DRINK_ADDON_GROUPS[0].id);
 
   useEffect(() => setMounted(true), []);
 
@@ -149,7 +156,8 @@ export default function DrinkAddonsSheet({
     if (!open) return;
     setSingleSel(defaultSingleSelection());
     setMultiSel(defaultMultiSelection());
-    setPaymentMethod("card");
+    setPaymentMethod(null);
+    setActiveTab(DRINK_ADDON_GROUPS[0].id);
   }, [open]);
 
   useEffect(() => {
@@ -214,6 +222,8 @@ export default function DrinkAddonsSheet({
     });
   }
 
+  const activeGroup = DRINK_ADDON_GROUPS.find((g) => g.id === activeTab);
+
   if (!mounted) return null;
 
   return createPortal(
@@ -252,27 +262,45 @@ export default function DrinkAddonsSheet({
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Header */}
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4">
-              <div className="min-w-0">
-                <h2
-                  id="addons-sheet-title"
-                  className="text-lg font-semibold leading-tight"
-                >
-                  Настрой свой напиток
-                </h2>
-                <p className="mt-0.5 truncate text-sm text-muted">
-                  {drinkName} · {volumeLabel} мл
-                </p>
-              </div>
+              <h2
+                id="addons-sheet-title"
+                className="text-lg font-semibold leading-tight"
+              >
+                Настрой свой напиток
+              </h2>
               <button
                 type="button"
                 onClick={() => !confirming && !bought && onClose()}
-                className="flex-shrink-0 rounded-xl p-2 transition-colors hover:bg-surface-el"
+                className="flex-shrink-0 rounded-xl p-2 transition-colors hover:bg-surface-el active:bg-surface-ov"
               >
                 <X size={18} className="text-muted" />
               </button>
             </div>
 
+            {/* Modifier tabs */}
+            {!bought && (
+              <div className="flex shrink-0 gap-2 overflow-x-auto px-4 py-3 border-b border-border/60 no-scrollbar">
+                {DRINK_ADDON_GROUPS.map((group) => (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => setActiveTab(group.id)}
+                    className={cn(
+                      "flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all",
+                      activeTab === group.id
+                        ? "bg-orange text-white shadow-sm"
+                        : "bg-surface-el text-muted hover:text-foreground",
+                    )}
+                  >
+                    {group.title}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Options list */}
             <div
               className="min-h-0 flex-1 overflow-y-auto px-5 py-4"
               style={{
@@ -295,83 +323,76 @@ export default function DrinkAddonsSheet({
                   </p>
                 </motion.div>
               ) : (
-                <div className="space-y-6">
-                  {DRINK_ADDON_GROUPS.map((group, gi) => (
-                    <motion.section
-                      key={group.id}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{
-                        delay: 0.04 * gi,
-                        duration: 0.28,
-                        ease: "easeOut",
-                      }}
-                    >
-                      <h3 className="mb-3 text-sm font-semibold text-muted">
-                        {group.title}
-                      </h3>
-                      <div className="space-y-2">
-                        {group.options.map((opt) => {
-                          const isSingle = group.type === "single";
-                          const checked = isSingle
-                            ? singleSel[group.id] === opt.id
-                            : multiSel.has(opt.id);
+                activeGroup && (
+                  <motion.div
+                    key={activeGroup.id}
+                    initial={{ opacity: 0, x: 12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                    className="space-y-2"
+                  >
+                    {activeGroup.options.map((opt) => {
+                      const isSingle = activeGroup.type === "single";
+                      const checked = isSingle
+                        ? singleSel[activeGroup.id] === opt.id
+                        : multiSel.has(opt.id);
 
-                          return (
-                            <label
-                              key={opt.id}
-                              className={cn(
-                                "flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition-colors",
-                                checked
-                                  ? "border-orange/40 bg-orange/10"
-                                  : "border-border bg-surface-el hover:border-border hover:bg-surface-ov",
-                              )}
-                            >
-                              <input
-                                type={isSingle ? "radio" : "checkbox"}
-                                name={
-                                  isSingle ? `addon-${group.id}` : undefined
-                                }
-                                checked={checked}
-                                onChange={() => {
-                                  if (isSingle) {
-                                    setSingleSel((s) => ({
-                                      ...s,
-                                      [group.id]: opt.id,
-                                    }));
-                                  } else {
-                                    toggleMultiOption(opt.id);
-                                  }
-                                }}
-                                className="h-4 w-4 shrink-0 rounded border-border accent-orange"
+                      return (
+                        <label
+                          key={opt.id}
+                          className={cn(
+                            "flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition-colors",
+                            checked
+                              ? "border-orange/40 bg-orange/10"
+                              : "border-border bg-surface-el hover:border-border hover:bg-surface-ov",
+                          )}
+                        >
+                          <input
+                            type={isSingle ? "radio" : "checkbox"}
+                            name={
+                              isSingle ? `addon-${activeGroup.id}` : undefined
+                            }
+                            checked={checked}
+                            onChange={() => {
+                              if (isSingle) {
+                                setSingleSel((s) => ({
+                                  ...s,
+                                  [activeGroup.id]: opt.id,
+                                }));
+                              } else {
+                                toggleMultiOption(opt.id);
+                              }
+                            }}
+                            className="h-4 w-4 shrink-0 rounded border-border accent-orange"
+                          />
+                          <span className="min-w-0 flex-1 text-sm font-medium">
+                            {opt.name}
+                          </span>
+                          {(opt.priceRub !== 0 || opt.priceBeans !== 0) && (
+                            <span className="flex shrink-0 flex-col items-end gap-0.5 text-xs">
+                              <span className="font-semibold tabular-nums text-foreground">
+                                {opt.priceRub === 0
+                                  ? `0 ${currencySymbol}`
+                                  : `+${opt.priceRub} ${currencySymbol}`}
+                              </span>
+                              <BeanAmount
+                                beans={opt.priceBeans}
+                                iconSize={12}
+                                positivePrefix
                               />
-                              <span className="min-w-0 flex-1 text-sm font-medium">
-                                {opt.name}
-                              </span>
-                              <span className="flex shrink-0 flex-col items-end gap-0.5 text-xs">
-                                <span className="font-semibold tabular-nums text-foreground">
-                                  {opt.priceRub === 0
-                                    ? `0 ${currencySymbol}`
-                                    : `+${opt.priceRub} ${currencySymbol}`}
-                                </span>
-                                <BeanAmount
-                                  beans={opt.priceBeans}
-                                  iconSize={12}
-                                  positivePrefix
-                                />
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </motion.section>
-                  ))}
-                </div>
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </motion.div>
+                )
               )}
             </div>
 
             {!bought && (
               <div className="shrink-0 border-t border-border bg-surface px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]">
+                {/* КБЖУ */}
                 <div className="mb-4 rounded-2xl bg-surface-el p-4">
                   <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
                     КБЖУ на порцию
@@ -408,72 +429,87 @@ export default function DrinkAddonsSheet({
                   </div>
                 </div>
 
-                <p className="mb-2 text-xs font-semibold text-muted">
-                  Способ оплаты
-                </p>
-                <div className="mb-4 space-y-2">
-                  <label
+                <div className="mb-4 grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("card")}
                     className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 transition-colors",
+                      "flex flex-col items-start gap-1.5 rounded-2xl border px-4 py-3 transition-colors text-left",
                       paymentMethod === "card"
                         ? "border-orange/40 bg-orange/10"
-                        : "border-border bg-surface-el",
+                        : "border-border bg-surface-el hover:bg-surface-ov",
                     )}
                   >
-                    <span className="text-sm font-medium">Оплатить картой</span>
-                    <input
-                      type="radio"
-                      name="pay-method"
-                      className="accent-orange"
-                      checked={paymentMethod === "card"}
-                      onChange={() => setPaymentMethod("card")}
-                    />
-                  </label>
-                  <label
-                    className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 transition-colors",
-                      paymentMethod === "beans"
-                        ? "border-orange/40 bg-orange/10"
-                        : "border-border bg-surface-el",
-                    )}
-                  >
-                    <span className="text-sm font-medium">Оплатить Бинами</span>
-                    <input
-                      type="radio"
-                      name="pay-method"
-                      className="accent-orange"
-                      checked={paymentMethod === "beans"}
-                      onChange={() => setPaymentMethod("beans")}
-                    />
-                  </label>
-                </div>
-
-                <div className="mb-3 flex items-center justify-between gap-3 text-sm">
-                  <span className="text-muted">Итого</span>
-                  <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
-                    <span className="font-semibold text-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <CreditCard
+                        size={14}
+                        className={
+                          paymentMethod === "card"
+                            ? "text-orange"
+                            : "text-muted"
+                        }
+                      />
+                      <span className="text-xs text-muted font-medium">
+                        Картой
+                      </span>
+                    </div>
+                    <span className="text-base font-bold tabular-nums text-foreground leading-none">
                       {formatPrice(totalRub, currencySymbol)}
                     </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("beans")}
+                    className={cn(
+                      "flex flex-col items-start gap-1.5 rounded-2xl border px-4 py-3 transition-colors text-left",
+                      paymentMethod === "beans"
+                        ? "border-orange/40 bg-orange/10"
+                        : "border-border bg-surface-el hover:bg-surface-ov",
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <CoffeeBeanIcon
+                        size={14}
+                        className={
+                          paymentMethod === "beans"
+                            ? "text-orange"
+                            : "text-muted"
+                        }
+                      />
+                      <span className="text-xs text-muted font-medium">
+                        Бинами
+                      </span>
+                    </div>
                     <BeanAmount
                       beans={totalBeans}
-                      iconSize={15}
-                      className="text-sm font-semibold"
+                      iconSize={16}
+                      className="text-base font-bold leading-none"
                     />
-                  </div>
+                  </button>
                 </div>
+
                 <Button
                   fullWidth
                   size="lg"
                   loading={confirming}
+                  disabled={!paymentMethod}
                   onClick={() =>
-                    onConfirm({ totalRub, totalBeans, labels, paymentMethod })
+                    paymentMethod &&
+                    onConfirm({
+                      totalRub,
+                      totalBeans,
+                      labels,
+                      paymentMethod,
+                      temperatureId: singleSel["temperature"] ?? "t-hot",
+                      milkId: singleSel["milk"] ?? "m-regular",
+                      singleSel,
+                      multiSel: Array.from(multiSel),
+                    })
                   }
                 >
-                  {confirming ? "Оформляем…" : "Оплатить и получить купон"}
+                  {confirming ? "Оформляем…" : "Купить"}
                 </Button>
-                <p className="mt-3 text-center text-[11px] text-muted">
-                  Покупка фискализируется сразу
-                </p>
               </div>
             )}
           </motion.div>

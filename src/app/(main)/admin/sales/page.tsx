@@ -209,7 +209,7 @@ export default function AdminSalesTestPage() {
   }
 
   return (
-    <div className="min-h-full pb-8 sm:pb-12">
+    <div className="min-h-full pb-nav-safe lg:pb-8 sm:pb-12">
       <AdminMobileBackLink />
       <div className="sticky top-0 z-20 border-b border-border bg-bg/95 px-3 pt-3 pb-3 backdrop-blur-md sm:px-4 lg:px-8 lg:pt-8">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">

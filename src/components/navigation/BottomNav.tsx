@@ -33,7 +33,7 @@ export default function BottomNav() {
     <nav
       className={cn(
         'fixed inset-x-0 bottom-0 z-[10050] lg:hidden flex flex-col',
-        'border-t border-border bg-surface backdrop-blur-md',
+        'bg-bg shadow-[0_-4px_16px_rgba(47,36,28,0.08)]',
       )}
     >
       <div className="flex items-stretch max-w-lg mx-auto w-full">
@@ -68,9 +68,8 @@ export default function BottomNav() {
           );
         })}
       </div>
-      {/* Отдельный блок под safe-area: фон как у панели, без «зазора» под навбаром */}
       <div
-        className="h-safe-area-bottom w-full shrink-0 bg-surface"
+        className="h-safe-area-bottom w-full shrink-0 bg-bg"
         aria-hidden
       />
     </nav>

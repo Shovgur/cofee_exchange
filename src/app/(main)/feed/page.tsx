@@ -4,14 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useCountry } from '@/contexts/CountryContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { getFeedByCountry, getIpoDrinkById } from '@/lib/mock-data';
 import { cn, feedTypeLabel, feedTypeColor, formatDate, formatIpoCountdown } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
 import type { FeedItem, FeedItemType, FeedLink, IpoDrink } from '@/types';
 import { ChevronRight, Rocket, Clock } from 'lucide-react';
-import CoffeeBeanIcon from '@/components/ui/CoffeeBeanIcon';
-
 const FILTERS: { value: 'all' | FeedItemType; label: string }[] = [
   { value: 'all',       label: 'Все' },
   { value: 'news',      label: 'Новости' },
@@ -143,7 +140,6 @@ function FeedCard({ item, onLink }: { item: FeedItem; onLink: (link?: FeedLink) 
 export default function FeedPage() {
   const { country } = useCountry();
   const router = useRouter();
-  const { user } = useAuth();
   const [filter, setFilter] = useState<'all' | FeedItemType>('all');
 
   const allItems = getFeedByCountry(country.id);
@@ -163,28 +159,7 @@ export default function FeedPage() {
     <div className="flex w-full flex-1 min-h-0 flex-col lg:flex-none lg:min-h-full">
       {/* Прокрутка только у <main>: без вложенного overflow — иначе sticky табов не работает */}
       <div className="flex w-full flex-col">
-        {/* Шапка — скроллится */}
-        <div className="shrink-0 px-4 lg:px-8 pt-4 lg:pt-8 pb-3">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <h1 className="text-xl lg:text-3xl font-bold">Лента</h1>
-              <p className="text-xs lg:text-sm text-muted mt-0.5">
-                Новости, акции и события
-              </p>
-              {user ? (
-                <div className="mt-3 space-y-1">
-                  <p className="text-sm font-medium truncate">{user.name}</p>
-                  <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-orange">
-                    <span>
-                      {new Intl.NumberFormat("ru-RU").format(user.loyaltyPoints)}
-                    </span>
-                    <CoffeeBeanIcon size={16} className="shrink-0" />
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
+        {/* Шапка убрана — только табы */}
 
         <div
           className={cn(
@@ -214,7 +189,7 @@ export default function FeedPage() {
           </div>
         </div>
 
-        <div className="shrink-0 px-4 lg:px-8 pt-4 pb-8">
+        <div className="shrink-0 px-4 lg:px-8 pt-4 pb-nav-safe lg:pb-8">
           {items.length === 0 && (
             <div className="text-center text-muted py-16">Нет материалов</div>
           )}
