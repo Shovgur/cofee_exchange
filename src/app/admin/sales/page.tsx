@@ -16,8 +16,6 @@ import {
 } from "@/lib/api/admin-drinks";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
-import { AdminMobileBackLink } from "@/components/admin/AdminMobileBackLink";
-
 /** Три объёма (как size_id для API). */
 const SIZE_OPTIONS: { size_id: string; label: string }[] = [
   { size_id: "0.2", label: "0,2 л" },
@@ -209,39 +207,34 @@ export default function AdminSalesTestPage() {
   }
 
   return (
-    <div className="min-h-full pb-nav-safe lg:pb-8 sm:pb-12">
-      <AdminMobileBackLink />
-      <div className="sticky top-0 z-20 border-b border-border bg-bg/95 px-3 pt-3 pb-3 backdrop-blur-md sm:px-4 lg:px-8 lg:pt-8">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-orange/15 flex items-center justify-center shrink-0">
-              <ShoppingCart size={18} className="text-orange" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-xl lg:text-2xl font-bold leading-tight">
-                Тестовые продажи
-              </h1>
-              <p className="text-xs text-muted mt-0.5 truncate">
-                Регистрация продаж для проверки биржи
-              </p>
-            </div>
+    <div className="p-8">
+      <div className="mb-8 flex max-w-3xl items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange/15">
+            <ShoppingCart size={20} className="text-orange" />
           </div>
-          <button
-            type="button"
-            onClick={loadCatalog}
-            disabled={catalogLoading}
-            className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-foreground transition-colors disabled:opacity-40 shrink-0"
-            title="Обновить список напитков"
-          >
-            <RefreshCw
-              size={16}
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold leading-tight">Тестовые продажи</h1>
+            <p className="mt-0.5 truncate text-sm text-muted">
+              Регистрация продаж для проверки биржи
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={loadCatalog}
+          disabled={catalogLoading}
+          className="shrink-0 rounded-xl p-2 text-muted transition-colors hover:bg-surface-el hover:text-foreground disabled:opacity-40"
+          title="Обновить список напитков"
+        >
+          <RefreshCw
+            size={18}
               className={cn(catalogLoading && "animate-spin")}
             />
           </button>
-        </div>
       </div>
 
-      <div className="mx-auto mt-4 w-full max-w-3xl space-y-5 px-3 sm:mt-6 sm:space-y-6 sm:px-4 lg:px-8">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
         {catalogError && (
           <div className="flex items-start gap-3 bg-danger/10 border border-danger/30 rounded-2xl p-4">
             <AlertCircle size={18} className="text-danger shrink-0 mt-0.5" />

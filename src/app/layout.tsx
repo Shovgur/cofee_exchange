@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'CoffeeX',
   },
   formatDetection: { telephone: false },

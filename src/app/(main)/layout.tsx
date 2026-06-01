@@ -4,10 +4,10 @@ import BottomNav from "@/components/navigation/BottomNav";
 import DesktopSidebar from "@/components/navigation/DesktopSidebar";
 import type { ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback } from "react";
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
+import { cn } from "@/lib/utils";
 
-const NAV_PAGES = ['/feed', '/map', '/menu', '/coupons', '/admin', '/profile'];
+const NAV_PAGES = ['/feed', '/map', '/menu', '/coupons', '/profile'];
 
 function resolvePageIndex(pathname: string): number {
   if (pathname === '/' || pathname === '/feed') return 0;
@@ -52,22 +52,26 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-lvh bg-bg">
-      {/* Desktop sidebar (hidden on mobile) */}
       <DesktopSidebar />
 
       <div className="lg:ml-64">
-        {/* Desktop: inner page wrapper */}
         <div className="lg:max-w-none">
-          <div className="max-w-lg mx-auto lg:max-w-none lg:mx-0 relative flex flex-col max-lg:h-[100dvh] max-lg:max-h-[100dvh] max-lg:min-h-0 max-lg:overflow-hidden lg:min-h-screen lg:h-auto lg:max-h-none lg:overflow-visible">
+          {/* Mobile PWA: fixed на весь экран + один safe-area сверху на оболочке, не на <main> */}
+          <div
+            className={cn(
+              'app-mobile-shell relative mx-auto flex w-full max-w-lg flex-col bg-bg',
+              'max-lg:fixed max-lg:inset-0 max-lg:z-0 max-lg:overflow-hidden',
+              'lg:max-w-none lg:mx-0 lg:static lg:min-h-screen lg:overflow-visible',
+            )}
+          >
             <main
-              className="flex flex-1 min-h-0 flex-col overflow-y-auto overflow-x-visible scrollable bg-bg pt-[env(safe-area-inset-top,0px)] pb-nav-safe lg:overflow-visible lg:pb-0 lg:pt-0"
+              className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-visible scrollable bg-bg pb-nav-safe lg:overflow-visible lg:pb-0"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
               {children}
             </main>
-            {/* Mobile bottom nav (hidden on desktop) */}
-            <div className="lg:hidden">
+            <div className="lg:hidden shrink-0">
               <BottomNav />
             </div>
           </div>

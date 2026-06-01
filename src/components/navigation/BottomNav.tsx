@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Newspaper, MapPin, Coffee, Ticket, LogIn, User, SlidersHorizontal } from 'lucide-react';
+import { Newspaper, MapPin, Coffee, Ticket, LogIn, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -11,7 +11,6 @@ const NAV_ITEMS_GUEST = [
   { href: '/map', icon: MapPin, label: 'Карта' },
   { href: '/menu', icon: Coffee, label: 'Меню' },
   { href: '/coupons', icon: Ticket, label: 'Купоны' },
-  { href: '/admin', icon: SlidersHorizontal, label: 'Админ' },
   { href: '/auth/login', icon: LogIn, label: 'Войти' },
 ];
 
@@ -20,7 +19,6 @@ const NAV_ITEMS_AUTH = [
   { href: '/map', icon: MapPin, label: 'Карта' },
   { href: '/menu', icon: Coffee, label: 'Меню' },
   { href: '/coupons', icon: Ticket, label: 'Купоны' },
-  { href: '/admin', icon: SlidersHorizontal, label: 'Админ' },
   { href: '/profile', icon: User, label: 'Профиль' },
 ];
 
@@ -41,9 +39,7 @@ export default function BottomNav() {
           const isActive =
             href === '/feed'
               ? pathname === '/feed' || pathname === '/'
-              : href === '/admin'
-                ? pathname.startsWith('/admin')
-                : pathname.startsWith(href);
+              : pathname.startsWith(href);
 
           return (
             <Link

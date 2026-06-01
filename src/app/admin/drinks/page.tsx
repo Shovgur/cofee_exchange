@@ -16,8 +16,6 @@ import {
 import { fetchAdminDrinksList, postAdminDrinkToggleActive, type AdminDrinkRead } from '@/lib/api/admin-drinks';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
-import { AdminMobileBackLink } from '@/components/admin/AdminMobileBackLink';
-
 function Badge({ children, color }: { children: React.ReactNode; color: string }) {
   return (
     <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium', color)}>
@@ -93,37 +91,33 @@ export default function AdminDrinksListPage() {
   }
 
   return (
-    <div className="min-h-full pb-12">
-      <AdminMobileBackLink />
-      {/* Header */}
-      <div className="sticky top-0 z-20 border-b border-border bg-bg/95 px-3 pt-3 backdrop-blur-md sm:px-4 lg:px-8 lg:pt-8 pb-3">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl lg:text-2xl font-bold">Напитки</h1>
-            <p className="text-xs text-muted mt-0.5">
-              {loading ? '…' : `${sortedDrinks.length} позиций`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={load}
-              disabled={loading}
-              className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-foreground transition-colors disabled:opacity-40"
-              title="Обновить"
-            >
-              <RefreshCw size={16} className={cn(loading && 'animate-spin')} />
-            </button>
-            <Link href="/admin/drinks/new">
-              <Button>
-                <Plus size={15} />
-                Добавить
-              </Button>
-            </Link>
-          </div>
+    <div className="p-8">
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Напитки</h1>
+          <p className="mt-0.5 text-sm text-muted">
+            {loading ? '…' : `${sortedDrinks.length} позиций`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={load}
+            disabled={loading}
+            className="rounded-xl p-2 text-muted transition-colors hover:bg-surface-el hover:text-foreground disabled:opacity-40"
+            title="Обновить"
+          >
+            <RefreshCw size={18} className={cn(loading && 'animate-spin')} />
+          </button>
+          <Link href="/admin/drinks/new">
+            <Button>
+              <Plus size={15} />
+              Добавить
+            </Button>
+          </Link>
         </div>
       </div>
 
-      <div className="mx-auto mt-4 w-full max-w-3xl px-3 sm:px-4 lg:px-8">
+      <div className="mx-auto w-full max-w-4xl">
         {error && (
           <div className="flex items-start gap-3 bg-danger/10 border border-danger/30 rounded-2xl p-4 mb-4">
             <AlertCircle size={18} className="text-danger shrink-0 mt-0.5" />

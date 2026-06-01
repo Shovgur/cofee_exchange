@@ -24,8 +24,6 @@ import {
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
-import { AdminMobileBackLink } from "@/components/admin/AdminMobileBackLink";
-
 //  Helpers
 
 function fmt(iso: string) {
@@ -299,34 +297,28 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-full pb-12">
-      <AdminMobileBackLink />
-      {/* Header */}
-      <div className="sticky top-0 z-20 border-b border-border bg-bg/95 px-3 pt-3 backdrop-blur-md sm:px-4 lg:px-8 lg:pt-8 pb-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-orange/15 flex items-center justify-center shrink-0">
-              <Settings size={18} className="text-orange" />
-            </div>
-            <div>
-              <h1 className="text-xl lg:text-2xl font-bold leading-tight">
-                Администрирование
-              </h1>
-              <p className="text-xs text-muted mt-0.5">Настройки движка цен</p>
-            </div>
+    <div className="p-8">
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange/15">
+            <Settings size={20} className="text-orange" />
           </div>
-          <button
-            onClick={loadAll}
-            disabled={loading}
-            className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-foreground transition-colors disabled:opacity-40"
-            title="Перезагрузить"
-          >
-            <RefreshCw size={16} className={cn(loading && "animate-spin")} />
-          </button>
+          <div>
+            <h1 className="text-2xl font-bold leading-tight">Настройки</h1>
+            <p className="mt-0.5 text-sm text-muted">Параметры движка цен</p>
+          </div>
         </div>
+        <button
+          onClick={loadAll}
+          disabled={loading}
+          className="rounded-xl p-2 text-muted transition-colors hover:bg-surface-el hover:text-foreground disabled:opacity-40"
+          title="Перезагрузить"
+        >
+          <RefreshCw size={18} className={cn(loading && "animate-spin")} />
+        </button>
       </div>
 
-      <div className="mx-auto mt-6 w-full max-w-3xl space-y-6 px-3 sm:px-4 lg:px-8">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
         {/* Error */}
         {error && (
           <div className="flex items-start gap-3 bg-danger/10 border border-danger/30 rounded-2xl p-4">

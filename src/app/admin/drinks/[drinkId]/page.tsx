@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -25,7 +26,6 @@ import {
 } from "@/lib/api/admin-drinks";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
-import { AdminMobileBackLink } from "@/components/admin/AdminMobileBackLink";
 
 // Helpers
 
@@ -353,9 +353,8 @@ export default function AdminDrinkDetailPage({ params }: PageProps) {
 
   if (loading)
     return (
-      <div className="min-h-full pb-12">
-        <AdminMobileBackLink />
-        <div className="mx-auto max-w-2xl space-y-4 px-3 pt-4 sm:px-4 lg:px-8 lg:pt-8">
+      <div className="p-8">
+        <div className="mx-auto max-w-2xl space-y-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-16 animate-pulse rounded-2xl bg-surface" />
           ))}
@@ -364,19 +363,16 @@ export default function AdminDrinkDetailPage({ params }: PageProps) {
     );
 
   return (
-    <div className="min-h-full pb-12">
-      <AdminMobileBackLink />
-      {/* Header */}
-      <div className="sticky top-0 z-20 border-b border-border bg-bg/95 px-3 pt-3 backdrop-blur-md sm:px-4 lg:px-8 lg:pt-8 pb-3">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="p-2 -ml-2 rounded-xl hover:bg-surface-el transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold truncate">{drink?.name ?? "…"}</h1>
+    <div className="p-8">
+      <div className="mb-8 flex items-center gap-3">
+        <Link
+          href="/admin/drinks"
+          className="-ml-2 shrink-0 rounded-xl p-2 transition-colors hover:bg-surface-el"
+        >
+          <ArrowLeft size={18} />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-2xl font-bold">{drink?.name ?? "…"}</h1>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               {drink && (
                 <>
@@ -410,17 +406,16 @@ export default function AdminDrinkDetailPage({ params }: PageProps) {
               )}
             </div>
           </div>
-          <button
-            onClick={() => load(true)}
-            className="p-2 rounded-xl hover:bg-surface-el text-muted hover:text-foreground transition-colors"
-            title="Обновить"
-          >
-            <RefreshCw size={15} />
-          </button>
-        </div>
+        <button
+          onClick={() => load(true)}
+          className="shrink-0 rounded-xl p-2 text-muted transition-colors hover:bg-surface-el hover:text-foreground"
+          title="Обновить"
+        >
+          <RefreshCw size={18} />
+        </button>
       </div>
 
-      <div className="mx-auto mt-6 w-full max-w-2xl space-y-5 px-3 sm:px-4 lg:px-8">
+      <div className="mx-auto w-full max-w-2xl space-y-5">
         {error && (
           <div className="flex items-start gap-3 bg-danger/10 border border-danger/30 rounded-2xl p-4">
             <AlertCircle size={18} className="text-danger shrink-0 mt-0.5" />

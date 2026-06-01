@@ -6,7 +6,7 @@ import { ArrowLeft, Save, AlertCircle, RefreshCw } from 'lucide-react';
 import { createAdminDrink, type AdminDrinkCreate } from '@/lib/api/admin-drinks';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
-import { AdminMobileBackLink } from '@/components/admin/AdminMobileBackLink';
+import Link from 'next/link';
 
 function Field({
   label,
@@ -106,25 +106,21 @@ export default function AdminDrinkNewPage() {
   }
 
   return (
-    <div className="min-h-full pb-12">
-      <AdminMobileBackLink />
-      {/* Header */}
-      <div className="sticky top-0 z-20 border-b border-border bg-bg/95 px-3 pt-3 backdrop-blur-md sm:px-4 lg:px-8 lg:pt-8 pb-3">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="p-2 -ml-2 rounded-xl hover:bg-surface-el transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold">Новый напиток</h1>
-            <p className="text-xs text-muted mt-0.5">Создание позиции</p>
-          </div>
+    <div className="p-8">
+      <div className="mb-8 flex items-center gap-3">
+        <Link
+          href="/admin/drinks"
+          className="-ml-2 rounded-xl p-2 transition-colors hover:bg-surface-el"
+        >
+          <ArrowLeft size={18} />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold">Новый напиток</h1>
+          <p className="mt-0.5 text-sm text-muted">Создание позиции</p>
         </div>
       </div>
 
-      <div className="mx-auto mt-6 w-full max-w-2xl space-y-4 px-3 sm:px-4 lg:px-8">
+      <div className="mx-auto w-full max-w-2xl space-y-4">
         {error && (
           <div className="flex items-start gap-3 bg-danger/10 border border-danger/30 rounded-2xl p-4">
             <AlertCircle size={18} className="text-danger shrink-0 mt-0.5" />
