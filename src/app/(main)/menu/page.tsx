@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -8,6 +8,8 @@ import {
   TrendingDown,
   Minus,
   Lock,
+  Search,
+  X,
 } from "lucide-react";
 import { useCountry } from "@/contexts/CountryContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -242,6 +244,9 @@ export default function MenuPage() {
   } = usePrices();
 
   const [category, setCategory] = useState<MenuTab>("all");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const categoryTabs = useMemo(
     () => [...tabsForDrinks(drinks), SECRET_TAB],
@@ -268,6 +273,29 @@ export default function MenuPage() {
     if (items.length > 0) groups.push({ key, items });
   }
 
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return drinks.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        d.nameShort.toLowerCase().includes(q),
+    );
+  }, [drinks, searchQuery]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      const t = window.setTimeout(() => searchInputRef.current?.focus(), 50);
+      return () => window.clearTimeout(t);
+    }
+    setSearchQuery("");
+  }, [searchOpen]);
+
+  function closeSearch() {
+    setSearchOpen(false);
+    setSearchQuery("");
+  }
+
   return (
     <div className="flex w-full flex-1 min-h-0 flex-col lg:flex-none lg:min-h-full">
       {/* Прокрутка только у <main>; вложенный overflow-y ломал sticky табов */}
@@ -279,32 +307,95 @@ export default function MenuPage() {
             "max-lg:sticky max-lg:top-0 z-[10025] shrink-0 w-full border-b border-border/60 max-lg:bg-bg bg-bg/95 px-4 lg:px-8 py-2.5 max-lg:shadow-[0_6px_20px_-12px_rgba(47,36,28,0.12)] lg:backdrop-blur-lg lg:shadow-none lg:supports-[backdrop-filter]:bg-bg/85 lg:static lg:z-auto",
           )}
         >
-          <div className="flex gap-2 overflow-x-auto pb-0.5 no-select">
-            {categoryTabs.map(({ value, label, emoji }) => (
+          {searchOpen ? (
+            <div className="flex items-center gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search
+                  size={18}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                />
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Название напитка…"
+                  enterKeyHint="search"
+                  className="w-full rounded-xl border border-border bg-surface-el py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted focus:border-orange/50 focus:outline-none focus:ring-1 focus:ring-orange/35"
+                />
+              </div>
               <button
-                key={value}
                 type="button"
-                onClick={() => setCategory(value)}
-                className={cn(
-                  "flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all border border-transparent",
-                  category === value
-                    ? value === "secret"
-                      ? "bg-surface-el text-orange border-orange/35 shadow-[0_0_0_1px_rgba(226,100,2,0.28)]"
-                      : "bg-orange text-white"
-                    : value === "secret"
-                      ? "bg-surface-el text-muted border-orange/15 hover:border-orange/30 hover:text-foreground"
-                      : "bg-surface-el text-muted hover:text-foreground",
-                )}
+                onClick={closeSearch}
+                aria-label="Закрыть поиск"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-el text-muted transition-colors hover:bg-surface-ov hover:text-foreground"
               >
-                <span>{emoji}</span>
-                {label === "Secret" ? "Secret Menu" : label}
+                <X size={18} />
               </button>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 no-select">
+                {categoryTabs.map(({ value, label, emoji }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setCategory(value)}
+                    className={cn(
+                      "flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all border border-transparent",
+                      category === value
+                        ? value === "secret"
+                          ? "bg-surface-el text-orange border-orange/35 shadow-[0_0_0_1px_rgba(226,100,2,0.28)]"
+                          : "bg-orange text-white"
+                        : value === "secret"
+                          ? "bg-surface-el text-muted border-orange/15 hover:border-orange/30 hover:text-foreground"
+                          : "bg-surface-el text-muted hover:text-foreground",
+                    )}
+                  >
+                    <span>{emoji}</span>
+                    {label === "Secret" ? "Secret Menu" : label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                aria-label="Поиск напитка"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-el text-muted transition-colors hover:bg-surface-ov hover:text-foreground"
+              >
+                <Search size={18} strokeWidth={2} />
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="shrink-0 px-4 lg:px-8 pb-nav-safe space-y-6 pt-4 lg:pb-8">
-          {category === "secret" ? (
+          {searchOpen ? (
+            <>
+              {!searchQuery.trim() ? (
+                <p className="py-8 text-center text-sm text-muted">
+                  Введите название напитка
+                </p>
+              ) : searchResults.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted">
+                  Ничего не найдено
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {searchResults.map((drink) => (
+                    <DrinkTile
+                      key={drink.id}
+                      drink={drink}
+                      isLocked={!user}
+                      currencySymbol={country.currencySymbol}
+                      flashTrend={flashMap.get(drink.id)}
+                      flashGen={flashGen}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : category === "secret" ? (
             <SecretMenuPanel />
           ) : (
             <>

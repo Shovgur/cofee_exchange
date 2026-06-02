@@ -13,8 +13,8 @@ import {
   ChevronRight,
   Globe,
   Shield,
-  Trophy,
   History,
+  CircleHelp,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
@@ -90,6 +90,7 @@ export default function ProfilePage() {
   const [showCountry, setShowCountry] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showBalanceHelp, setShowBalanceHelp] = useState(false);
   const [notifSettings, setNotifSettings] = useState({
     priceAlerts: true,
     promotions: true,
@@ -129,9 +130,16 @@ export default function ProfilePage() {
             {/* Barcode under user info */}
             <ProfileBarcode value={barcodeValue} />
 
-            {/* 3-column stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-surface rounded-2xl p-3 text-center border border-border">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative bg-surface rounded-2xl p-3 text-center border border-border min-h-[5.25rem]">
+                <button
+                  type="button"
+                  onClick={() => setShowBalanceHelp(true)}
+                  aria-label="Что такое Бины"
+                  className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-surface-el text-muted transition-colors hover:bg-surface-ov hover:text-foreground"
+                >
+                  <CircleHelp size={14} strokeWidth={2} />
+                </button>
                 <div className="text-lg font-bold text-orange tabular-nums">
                   {new Intl.NumberFormat('ru-RU').format(user.loyaltyPoints)}
                 </div>
@@ -149,14 +157,6 @@ export default function ProfilePage() {
                 <History size={18} className="text-orange" />
                 <span className="text-xs font-medium leading-tight">История</span>
               </button>
-
-              <div className="bg-surface rounded-2xl p-3 text-center border border-border opacity-55 flex flex-col items-center justify-center gap-1 min-h-[5.25rem]">
-                <Trophy size={18} className="text-muted" />
-                <span className="text-[11px] font-medium leading-tight text-muted">
-                  Достижения
-                  <span className="block text-[10px] mt-0.5">(скоро)</span>
-                </span>
-              </div>
             </div>
           </div>
 
@@ -191,13 +191,6 @@ export default function ProfilePage() {
                 {
                   icon: Shield,
                   label: 'Безопасность',
-                  onClick: () => {},
-                  badge: 'Скоро',
-                  disabled: true,
-                },
-                {
-                  icon: Trophy,
-                  label: 'Достижения',
                   onClick: () => {},
                   badge: 'Скоро',
                   disabled: true,
@@ -261,6 +254,35 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      <Modal
+        open={showBalanceHelp}
+        onClose={() => setShowBalanceHelp(false)}
+        title="Что такое Бины"
+      >
+        <div className="space-y-3 text-sm leading-relaxed text-muted">
+          <p>
+            <span className="font-medium text-foreground">Бины</span> — внутренняя
+            валюта Coffee Exchange. Ими можно оплачивать напитки вместо рублей при
+            оформлении заказа в приложении.
+          </p>
+          <p>
+            Бины начисляются за покупки в кофейнях сети: покажите штрихкод из профиля
+            на кассе, и баланс пополнится после оплаты.
+          </p>
+          <p>
+            Стоимость напитка в Бинах указана рядом с ценой в рублях. Баланс
+            привязан к вашему аккаунту и сохраняется при смене страны в настройках.
+          </p>
+        </div>
+        <Button
+          fullWidth
+          className="mt-5"
+          onClick={() => setShowBalanceHelp(false)}
+        >
+          Понятно
+        </Button>
+      </Modal>
 
       {/* History modal */}
       <Modal open={showHistory} onClose={() => setShowHistory(false)} title="История покупок">

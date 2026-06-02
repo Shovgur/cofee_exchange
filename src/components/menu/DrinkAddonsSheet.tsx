@@ -97,6 +97,18 @@ function sumNutrition(sel: {
   return { calories, proteins, fats, carbs };
 }
 
+function drinkMood(
+  singleSel: Record<string, string>,
+  calories: number,
+): { label: string; emoji: string } {
+  if (singleSel["temperature"] === "t-cold") {
+    return { label: "Освежение", emoji: "❄️" };
+  }
+  if (calories >= 250) return { label: "Сытно", emoji: "😌" };
+  if (calories >= 120) return { label: "Бодрость", emoji: "⚡" };
+  return { label: "Лёгкость", emoji: "🍃" };
+}
+
 export interface DrinkNutritionBase {
   calories: number;
   proteins: number;
@@ -213,6 +225,11 @@ export default function DrinkAddonsSheet({
   const totalRub = basePriceRub + addonRub;
   const totalBeans = baseBeans + addonBeans;
 
+  const mood = useMemo(
+    () => drinkMood(singleSel, totalNutrition.calories),
+    [singleSel, totalNutrition.calories],
+  );
+
   function toggleMultiOption(optionId: string) {
     setMultiSel((prev) => {
       const next = new Set(prev);
@@ -231,39 +248,17 @@ export default function DrinkAddonsSheet({
       {open && (
         <motion.div
           key="drink-addons-ui"
-          className="fixed inset-0 z-[10070] flex flex-col justify-end lg:justify-center lg:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="addons-sheet-title"
+          className="fixed inset-0 z-[10070] flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-surface"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          <button
-            type="button"
-            aria-label="Закрыть"
-            className="absolute inset-0 bg-black/65 backdrop-blur-sm"
-            onClick={() => !confirming && !bought && onClose()}
-          />
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="addons-sheet-title"
-            className={cn(
-              "relative z-10 flex max-h-[min(88dvh,720px)] w-full max-w-lg flex-col overflow-hidden bg-surface shadow-2xl lg:mx-auto lg:max-h-[85vh] lg:rounded-3xl",
-              "rounded-t-3xl border border-border border-b-0 lg:border-b",
-            )}
-            initial={{ y: "100%", opacity: 0.96 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "100%", opacity: 0.96 }}
-            transition={{
-              type: "spring",
-              damping: 30,
-              stiffness: 360,
-              mass: 0.85,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top,0px))]">
               <h2
                 id="addons-sheet-title"
                 className="text-lg font-semibold leading-tight"
@@ -281,14 +276,14 @@ export default function DrinkAddonsSheet({
 
             {/* Modifier tabs */}
             {!bought && (
-              <div className="flex shrink-0 gap-2 overflow-x-auto px-4 py-3 border-b border-border/60 no-scrollbar">
+              <div className="flex shrink-0 flex-wrap gap-2 px-4 py-3 border-b border-border/60">
                 {DRINK_ADDON_GROUPS.map((group) => (
                   <button
                     key={group.id}
                     type="button"
                     onClick={() => setActiveTab(group.id)}
                     className={cn(
-                      "flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all",
+                      "rounded-xl px-4 py-2 text-sm font-medium transition-all",
                       activeTab === group.id
                         ? "bg-orange text-white shadow-sm"
                         : "bg-surface-el text-muted hover:text-foreground",
@@ -301,12 +296,7 @@ export default function DrinkAddonsSheet({
             )}
 
             {/* Options list */}
-            <div
-              className="min-h-0 flex-1 overflow-y-auto px-5 py-4"
-              style={{
-                paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
-              }}
-            >
+            <div className="min-h-0 flex-1 overflow-y-auto scrollable px-5 py-4">
               {bought ? (
                 <motion.div
                   className="flex flex-col items-center gap-4 py-10"
@@ -397,7 +387,7 @@ export default function DrinkAddonsSheet({
                   <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
                     КБЖУ на порцию
                   </h3>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-5 gap-1.5">
                     {[
                       {
                         label: "Кал.",
@@ -415,13 +405,30 @@ export default function DrinkAddonsSheet({
                         label: "Углев.",
                         value: `${totalNutrition.carbs.toFixed(1)}г`,
                       },
-                    ].map(({ label, value }) => (
+                      {
+                        label: "Настроение",
+                        value: mood.label,
+                        emoji: mood.emoji,
+                      },
+                    ].map(({ label, value, emoji }) => (
                       <div
                         key={label}
                         className="rounded-xl bg-bg/80 py-2 text-center"
                       >
-                        <div className="text-[10px] text-muted">{label}</div>
-                        <div className="text-xs font-semibold tabular-nums">
+                        <div className="text-[10px] text-muted leading-tight">
+                          {label === "Настроение" ? "Настро." : label}
+                        </div>
+                        {emoji ? (
+                          <div className="mt-0.5 text-base leading-none">
+                            {emoji}
+                          </div>
+                        ) : null}
+                        <div
+                          className={cn(
+                            "font-semibold tabular-nums leading-tight",
+                            emoji ? "text-[10px]" : "text-xs",
+                          )}
+                        >
                           {value}
                         </div>
                       </div>
@@ -512,7 +519,6 @@ export default function DrinkAddonsSheet({
                 </Button>
               </div>
             )}
-          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>,

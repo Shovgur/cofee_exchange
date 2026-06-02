@@ -296,44 +296,44 @@ export default function DrinkPage({ params }: PageProps) {
           >
             <DrinkHero3D drink={drink} />
             <div className="p-5">
-              <div className="flex items-start justify-between gap-4 mb-5">
-                <div className="min-w-0 flex-1 pr-1">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <h1 className="text-xl font-bold leading-tight">
                     {drink.name}
                   </h1>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  {/* Trend badge BEFORE price */}
-                  <div
-                    key={`pct-${animKey}`}
-                    className={cn(
-                      "inline-flex shrink-0 items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium",
-                      trendBg(activeVol.trend),
-                      animKey > 0 ? "dp-pct-in" : "",
-                    )}
-                  >
-                    <TrendIcon size={12} />
-                    {formatPriceChange(activeVol.change)}
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <div className="flex flex-nowrap items-center justify-end gap-2">
+                    <div
+                      key={`pct-${animKey}`}
+                      className={cn(
+                        "inline-flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-0.5 text-xs font-medium",
+                        trendBg(activeVol.trend),
+                        animKey > 0 ? "dp-pct-in" : "",
+                      )}
+                    >
+                      <TrendIcon size={11} />
+                      {formatPriceChange(activeVol.change)}
+                    </div>
+                    <span
+                      key={`price-rub-${animKey}`}
+                      className={cn(
+                        "text-lg font-bold leading-none tracking-tight whitespace-nowrap text-foreground",
+                        animTrend === "up" && animKey > 0
+                          ? "dp-price-up"
+                          : animTrend === "down" && animKey > 0
+                            ? "dp-price-down"
+                            : animTrend === "neutral" && animKey > 0
+                              ? "dp-price-neutral"
+                              : "",
+                      )}
+                    >
+                      {formatPrice(activeVol.price, country.currencySymbol)}
+                    </span>
                   </div>
-                  {/* Price */}
-                  <span
-                    key={`price-rub-${animKey}`}
-                    className={cn(
-                      "text-2xl font-bold leading-none tracking-tight whitespace-nowrap text-foreground",
-                      animTrend === "up" && animKey > 0
-                        ? "dp-price-up"
-                        : animTrend === "down" && animKey > 0
-                          ? "dp-price-down"
-                          : animTrend === "neutral" && animKey > 0
-                            ? "dp-price-neutral"
-                            : "",
-                    )}
-                  >
-                    {formatPrice(activeVol.price, country.currencySymbol)}
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-base font-semibold tabular-nums text-orange">
+                  <span className="inline-flex items-center gap-0.5 text-sm font-semibold tabular-nums text-orange">
                     {drinkBeans}
-                    <CoffeeBeanIcon size={15} className="shrink-0" />
+                    <CoffeeBeanIcon size={14} className="shrink-0" />
                   </span>
                 </div>
               </div>
@@ -375,6 +375,15 @@ export default function DrinkPage({ params }: PageProps) {
               Перетащи нижний слайдер для зума
             </p>
           </div>
+
+          {drink.description ? (
+            <div className="bg-surface rounded-3xl p-4">
+              <h2 className="text-sm font-semibold mb-2">Описание</h2>
+              <p className="text-sm leading-relaxed text-muted">
+                {drink.description}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {/* Fixed continue button with blur overlay (mobile) */}
