@@ -167,7 +167,7 @@ export default function FeedPage() {
             'max-lg:sticky max-lg:top-0 z-[10025] shrink-0 w-full border-b border-border/60 max-lg:bg-bg bg-bg/95 px-4 lg:px-8 py-2.5 max-lg:shadow-[0_6px_20px_-12px_rgba(0,0,0,0.85)] lg:backdrop-blur-lg lg:shadow-none lg:supports-[backdrop-filter]:bg-bg/85 lg:static lg:z-auto',
           )}
         >
-          <div className="flex gap-2 overflow-x-auto pb-0.5 no-select">
+          <div className="touch-pan-x flex gap-2 overflow-x-auto pb-0.5 no-select">
             {FILTERS.map(({ value, label }) => (
               <button
                 key={value}

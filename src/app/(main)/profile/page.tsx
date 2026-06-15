@@ -15,6 +15,7 @@ import {
   Shield,
   History,
   CircleHelp,
+  Trophy,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
@@ -130,7 +131,7 @@ export default function ProfilePage() {
             {/* Barcode under user info */}
             <ProfileBarcode value={barcodeValue} />
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="relative bg-surface rounded-2xl p-3 text-center border border-border min-h-[5.25rem]">
                 <button
                   type="button"
@@ -157,6 +158,17 @@ export default function ProfilePage() {
                 <History size={18} className="text-orange" />
                 <span className="text-xs font-medium leading-tight">История</span>
               </button>
+
+              <div
+                aria-disabled
+                className="bg-surface rounded-2xl p-3 text-center border border-border opacity-55 flex flex-col items-center justify-center gap-1 min-h-[5.25rem] cursor-default"
+              >
+                <Trophy size={18} className="text-muted" />
+                <span className="text-[11px] font-medium leading-tight text-muted">
+                  Достижения
+                  <span className="block text-[10px] mt-0.5">(скоро)</span>
+                </span>
+              </div>
             </div>
           </div>
 

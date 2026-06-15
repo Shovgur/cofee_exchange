@@ -45,6 +45,7 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
+              replace
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-1 py-3 px-1',
                 'transition-colors duration-150',

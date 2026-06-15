@@ -74,7 +74,7 @@ export default function CouponsPage() {
             </span>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1 no-select">
+          <div className="touch-pan-x flex gap-2 overflow-x-auto pb-1 no-select">
             {FILTERS.map(({ value, label }) => (
               <button
                 key={value}

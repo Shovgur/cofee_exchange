@@ -335,7 +335,7 @@ export default function MenuPage() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 no-select">
+              <div className="touch-pan-x flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 no-select">
                 {categoryTabs.map(({ value, label, emoji }) => (
                   <button
                     key={value}
