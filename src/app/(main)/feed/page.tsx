@@ -189,7 +189,7 @@ export default function FeedPage() {
           </div>
         </div>
 
-        <div className="shrink-0 px-4 lg:px-8 pt-4 pb-nav-safe lg:pb-8">
+        <div className="shrink-0 px-4 lg:px-8 pt-4 lg:pb-8">
           {items.length === 0 && (
             <div className="text-center text-muted py-16">Нет материалов</div>
           )}

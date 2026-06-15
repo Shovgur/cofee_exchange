@@ -92,7 +92,7 @@ export default function CouponsPage() {
           </div>
         </div>
 
-        <div className="px-4 lg:px-8 pt-2 pb-nav-safe lg:pb-8 grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 px-4 pt-2 lg:grid-cols-2 lg:px-8 lg:pb-8">
           {visible.length === 0 && (
             <div className="lg:col-span-2 flex flex-col items-center gap-4 py-16 text-center">
               <Ticket size={40} className="text-muted" />

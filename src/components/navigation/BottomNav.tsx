@@ -30,11 +30,12 @@ export default function BottomNav() {
   return (
     <nav
       className={cn(
-        'fixed inset-x-0 bottom-0 z-[10050] lg:hidden flex flex-col',
+        'fixed inset-x-0 bottom-0 z-[10050] lg:hidden',
         'bg-bg shadow-[0_-4px_16px_rgba(47,36,28,0.08)]',
+        'pb-[env(safe-area-inset-bottom,0px)]',
       )}
     >
-      <div className="flex items-stretch max-w-lg mx-auto w-full">
+      <div className="mx-auto flex w-full max-w-lg items-stretch">
         {items.map(({ href, icon: Icon, label }) => {
           const isActive =
             href === '/feed'
@@ -65,10 +66,6 @@ export default function BottomNav() {
           );
         })}
       </div>
-      <div
-        className="h-safe-area-bottom w-full shrink-0 bg-bg"
-        aria-hidden
-      />
     </nav>
   );
 }

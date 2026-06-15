@@ -114,7 +114,7 @@ export default function ProfilePage() {
   return (
     <AuthGate fallbackMessage="Войдите в аккаунт, чтобы видеть профиль, историю покупок и настройки.">
       {user && (
-        <div className="pb-nav-safe max-w-2xl lg:mx-8 lg:pt-8 lg:pb-6 w-full">
+        <div className="max-w-2xl lg:mx-8 lg:pt-8 lg:pb-6 w-full">
           {/* Header */}
           <div className="px-4 pt-6 pb-5 lg:px-0 space-y-4">
             {/* User info */}
