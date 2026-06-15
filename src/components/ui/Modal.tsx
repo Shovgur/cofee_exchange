@@ -30,8 +30,8 @@ export default function Modal({ open, onClose, title, children, className }: Pro
     <div
       className={cn(
         'fixed inset-0 z-[10060] flex justify-center',
-        /* mobile: bottom sheet на весь экран, без отступа под навбар */
-        'items-end px-0 pb-0',
+        /* mobile: лист над таб-баром, визуально стыкуется с ним */
+        'max-lg:items-end max-lg:pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))]',
         'lg:items-center lg:p-4',
       )}
     >
@@ -46,9 +46,9 @@ export default function Modal({ open, onClose, title, children, className }: Pro
         aria-labelledby={title ? 'modal-title' : undefined}
         className={cn(
           'relative flex w-full max-w-lg flex-col bg-surface shadow-2xl',
-          'max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-0.25rem))]',
-          'rounded-t-3xl lg:max-h-[min(90dvh,40rem)] lg:rounded-3xl',
-          'pb-[env(safe-area-inset-bottom,0px)]',
+          'max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-4rem))]',
+          'rounded-t-3xl max-lg:rounded-b-none',
+          'lg:max-h-[min(90dvh,40rem)] lg:rounded-3xl',
           className,
         )}
         onClick={(e) => e.stopPropagation()}
@@ -70,7 +70,7 @@ export default function Modal({ open, onClose, title, children, className }: Pro
             <X size={18} className="text-muted" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 pt-4 pb-6 max-lg:pb-8 lg:pb-6">
           {children}
         </div>
       </div>

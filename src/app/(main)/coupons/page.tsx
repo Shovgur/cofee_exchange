@@ -182,7 +182,7 @@ export default function CouponsPage() {
         title="Ваш купон"
       >
         {selected && (
-          <div className="space-y-5">
+          <div className="space-y-5 pb-1">
             {selected.purchaseSummary && (
               <div className="rounded-2xl border border-border bg-surface-el p-4">
                 <p className="text-xs font-semibold text-muted mb-2">Состав заказа</p>
