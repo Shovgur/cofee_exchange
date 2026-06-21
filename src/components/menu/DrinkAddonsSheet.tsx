@@ -6,10 +6,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, CreditCard } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import {
-  DRINK_ADDON_GROUPS,
+  collectModifierIds,
+  defaultMultiSelection,
+  defaultSingleSelection,
   type DrinkAddonGroup,
   type DrinkAddonNutrition,
-} from "@/lib/mock-data/drink-addons";
+} from "@/lib/drinks/addons";
 import Button from "@/components/ui/Button";
 import CoffeeBeanIcon from "@/components/ui/CoffeeBeanIcon";
 
@@ -38,40 +40,18 @@ function BeanAmount({
   );
 }
 
-function defaultSingleSelection(): Record<string, string> {
-  const m: Record<string, string> = {};
-  for (const g of DRINK_ADDON_GROUPS) {
-    if (g.type !== "single") continue;
-    const free = g.options.find((o) => o.priceRub === 0 && o.priceBeans === 0);
-    m[g.id] = (free ?? g.options[0]).id;
-  }
-  return m;
-}
-
-function defaultMultiSelection(): Set<string> {
-  const s = new Set<string>();
-  for (const g of DRINK_ADDON_GROUPS) {
-    if (g.type !== "multi") continue;
-    for (const o of g.options) {
-      if (o.priceRub === 0 && o.priceBeans === 0) s.add(o.id);
-    }
-  }
-  return s;
-}
-
-function optionById(group: DrinkAddonGroup, id: string) {
-  return group.options.find((o) => o.id === id);
-}
-
-function sumNutrition(sel: {
-  singleSel: Record<string, string>;
-  multiSel: Set<string>;
-}): DrinkAddonNutrition {
+function sumNutrition(
+  groups: DrinkAddonGroup[],
+  sel: {
+    singleSel: Record<string, string>;
+    multiSel: Set<string>;
+  },
+): DrinkAddonNutrition {
   let calories = 0;
   let proteins = 0;
   let fats = 0;
   let carbs = 0;
-  for (const g of DRINK_ADDON_GROUPS) {
+  for (const g of groups) {
     if (g.type === "single") {
       const o = optionById(g, sel.singleSel[g.id] ?? "");
       const n = o?.nutrition;
@@ -97,13 +77,11 @@ function sumNutrition(sel: {
   return { calories, proteins, fats, carbs };
 }
 
-function drinkMood(
-  singleSel: Record<string, string>,
-  calories: number,
-): { label: string; emoji: string } {
-  if (singleSel["temperature"] === "t-cold") {
-    return { label: "Освежение", emoji: "❄️" };
-  }
+function optionById(group: DrinkAddonGroup, id: string) {
+  return group.options.find((o) => o.id === id);
+}
+
+function drinkMood(calories: number): { label: string; emoji: string } {
   if (calories >= 250) return { label: "Сытно", emoji: "😌" };
   if (calories >= 120) return { label: "Бодрость", emoji: "⚡" };
   return { label: "Лёгкость", emoji: "🍃" };
@@ -125,15 +103,13 @@ interface Props {
   baseBeans: number;
   currencySymbol: string;
   drinkNutrition: DrinkNutritionBase;
+  groups: DrinkAddonGroup[];
   onConfirm: (payload: {
     totalRub: number;
     totalBeans: number;
     labels: string[];
     paymentMethod: "card" | "beans";
-    temperatureId: string;
-    milkId: string;
-    singleSel: Record<string, string>;
-    multiSel: string[];
+    modifierIds: string[];
   }) => void;
   confirming: boolean;
   bought: boolean;
@@ -148,29 +124,28 @@ export default function DrinkAddonsSheet({
   baseBeans,
   currencySymbol,
   drinkNutrition,
+  groups,
   onConfirm,
   confirming,
   bought,
 }: Props) {
   const [mounted, setMounted] = useState(false);
-  const [singleSel, setSingleSel] = useState<Record<string, string>>(
-    defaultSingleSelection,
-  );
-  const [multiSel, setMultiSel] = useState<Set<string>>(defaultMultiSelection);
+  const [singleSel, setSingleSel] = useState<Record<string, string>>({});
+  const [multiSel, setMultiSel] = useState<Set<string>>(new Set());
   const [paymentMethod, setPaymentMethod] = useState<"card" | "beans" | null>(
     null,
   );
-  const [activeTab, setActiveTab] = useState<string>(DRINK_ADDON_GROUPS[0].id);
+  const [activeTab, setActiveTab] = useState<string>("");
 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!open) return;
-    setSingleSel(defaultSingleSelection());
-    setMultiSel(defaultMultiSelection());
+    setSingleSel(defaultSingleSelection(groups));
+    setMultiSel(defaultMultiSelection(groups));
     setPaymentMethod(null);
-    setActiveTab(DRINK_ADDON_GROUPS[0].id);
-  }, [open]);
+    setActiveTab(groups[0]?.id ?? "");
+  }, [open, groups]);
 
   useEffect(() => {
     if (open) {
@@ -187,7 +162,7 @@ export default function DrinkAddonsSheet({
     let ar = 0;
     let ab = 0;
     const ls: string[] = [];
-    for (const g of DRINK_ADDON_GROUPS) {
+    for (const g of groups) {
       if (g.type === "single") {
         const id = singleSel[g.id];
         const o = optionById(g, id!);
@@ -206,11 +181,11 @@ export default function DrinkAddonsSheet({
       }
     }
     return { addonRub: ar, addonBeans: ab, labels: ls };
-  }, [singleSel, multiSel]);
+  }, [singleSel, multiSel, groups]);
 
   const addonNutrition = useMemo(
-    () => sumNutrition({ singleSel, multiSel }),
-    [singleSel, multiSel],
+    () => sumNutrition(groups, { singleSel, multiSel }),
+    [groups, singleSel, multiSel],
   );
 
   const totalNutrition = useMemo(() => {
@@ -226,8 +201,8 @@ export default function DrinkAddonsSheet({
   const totalBeans = baseBeans + addonBeans;
 
   const mood = useMemo(
-    () => drinkMood(singleSel, totalNutrition.calories),
-    [singleSel, totalNutrition.calories],
+    () => drinkMood(totalNutrition.calories),
+    [totalNutrition.calories],
   );
 
   function toggleMultiOption(optionId: string) {
@@ -239,7 +214,7 @@ export default function DrinkAddonsSheet({
     });
   }
 
-  const activeGroup = DRINK_ADDON_GROUPS.find((g) => g.id === activeTab);
+  const activeGroup = groups.find((g) => g.id === activeTab);
 
   if (!mounted) return null;
 
@@ -275,9 +250,9 @@ export default function DrinkAddonsSheet({
             </div>
 
             {/* Modifier tabs */}
-            {!bought && (
+            {!bought && groups.length > 0 && (
               <div className="flex shrink-0 flex-wrap gap-2 px-4 py-3 border-b border-border/60">
-                {DRINK_ADDON_GROUPS.map((group) => (
+                {groups.map((group) => (
                   <button
                     key={group.id}
                     type="button"
@@ -312,6 +287,10 @@ export default function DrinkAddonsSheet({
                     Купон добавлен в раздел «Купоны»
                   </p>
                 </motion.div>
+              ) : groups.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted">
+                  Дополнительные опции для этого напитка не доступны
+                </p>
               ) : (
                 activeGroup && (
                   <motion.div
@@ -468,8 +447,10 @@ export default function DrinkAddonsSheet({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("beans")}
+                    disabled={baseBeans <= 0}
                     className={cn(
                       "flex flex-col items-start gap-1.5 rounded-2xl border px-4 py-3 transition-colors text-left",
+                      baseBeans <= 0 && "opacity-40 cursor-not-allowed",
                       paymentMethod === "beans"
                         ? "border-orange/40 bg-orange/10"
                         : "border-border bg-surface-el hover:bg-surface-ov",
@@ -508,10 +489,7 @@ export default function DrinkAddonsSheet({
                       totalBeans,
                       labels,
                       paymentMethod,
-                      temperatureId: singleSel["temperature"] ?? "t-hot",
-                      milkId: singleSel["milk"] ?? "m-regular",
-                      singleSel,
-                      multiSel: Array.from(multiSel),
+                      modifierIds: collectModifierIds(groups, singleSel, multiSel),
                     })
                   }
                 >

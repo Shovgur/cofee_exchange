@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, AlertCircle, RefreshCw } from 'lucide-react';
-import { createAdminDrink, type AdminDrinkCreate } from '@/lib/api/admin-drinks';
+import { createAdminDrink, type AdminDrinkCreate } from '@/lib/api/exchange/admin-drinks';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Link from 'next/link';

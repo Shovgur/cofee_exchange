@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import {
   ArrowLeft,
   TrendingUp,
@@ -13,23 +12,32 @@ import {
 } from "lucide-react";
 import { useCountry } from "@/contexts/CountryContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { createDemoCoupon } from "@/lib/auth/demo-auth";
 import { usePrices } from "@/contexts/PricesContext";
-import { postSale } from "@/lib/api";
+import {
+  createMoneyPayment,
+  fetchMenuItem,
+  findLoyaltyItemId,
+  LoyaltyApiError,
+  purchaseCouponWithQuote,
+  quoteBeanPurchase,
+  quoteMoneyPurchase,
+} from "@/lib/api/loyalty";
 import {
   buildDrinkFromGroup,
   getPriceEntriesForDrinkRoute,
-} from "@/lib/api/menu";
+} from "@/lib/drinks/build-from-prices";
+import {
+  mapApiModifiersToGroups,
+  type DrinkAddonGroup,
+} from "@/lib/drinks/addons";
 import { formatPrice, formatPriceChange, trendBg, cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import AuthGate from "@/components/auth/AuthGate";
 import DrinkAddonsSheet from "@/components/menu/DrinkAddonsSheet";
 import CoffeeBeanIcon from "@/components/ui/CoffeeBeanIcon";
 import dynamic from "next/dynamic";
-import type { Coupon, PriceTrend, VolumePrice } from "@/types";
-import {
-  mockBeansForDrinkPrice,
-  DRINK_ADDON_GROUPS,
-} from "@/lib/mock-data/drink-addons";
+import type { PriceTrend, VolumePrice } from "@/types";
 
 const PriceChart = dynamic(() => import("@/components/menu/PriceChart"), {
   ssr: false,
@@ -49,22 +57,13 @@ interface PageProps {
   params: { drinkId: string };
 }
 
-/** Склонение прилагательного для молока */
-function milkAdjective(milkId: string): string {
-  const map: Record<string, string> = {
-    "m-regular": "обычном",
-    "m-oat": "овсяном",
-    "m-coconut": "кокосовом",
-  };
-  return map[milkId] ?? "обычном";
-}
 
 export default function DrinkPage({ params }: PageProps) {
   const router = useRouter();
   const { country } = useCountry();
-  const { user, addCoupon } = useAuth();
+  const { user, isDemo, purchaseDemoCoupon, refreshCoupons, refreshUserData } = useAuth();
 
-  const { prices, loading, error, flashMap, flashGen } = usePrices();
+  const { prices, menuItems, loading, error, flashMap, flashGen } = usePrices();
 
   const drink = useMemo(() => {
     if (prices.length === 0) return null;
@@ -79,6 +78,7 @@ export default function DrinkPage({ params }: PageProps) {
   const [showAddons, setShowAddons] = useState(false);
   const [buying, setBuying] = useState(false);
   const [bought, setBought] = useState(false);
+  const [addonGroups, setAddonGroups] = useState<DrinkAddonGroup[]>([]);
   const [notifEnabled, setNotifEnabled] = useState(false);
 
   const [animKey, setAnimKey] = useState(0);
@@ -98,6 +98,43 @@ export default function DrinkPage({ params }: PageProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flashGen]);
+
+  const activeVol = useMemo(() => {
+    if (!drink) return null;
+    if (
+      selectedVolume &&
+      drink.volumes.find((v) => v.value === selectedVolume.value)
+    ) {
+      return selectedVolume;
+    }
+    return (
+      drink.volumes[Math.floor(drink.volumes.length / 2)] ?? drink.volumes[0]
+    );
+  }, [drink, selectedVolume]);
+
+  useEffect(() => {
+    if (!showAddons || !drink || !activeVol) return;
+    const loyaltyItemId =
+      activeVol.loyaltyItemId ??
+      findLoyaltyItemId(menuItems, drink.id, activeVol.value);
+    if (!loyaltyItemId) {
+      setAddonGroups([]);
+      return;
+    }
+    let cancelled = false;
+    fetchMenuItem(loyaltyItemId)
+      .then((detail) => {
+        if (!cancelled) {
+          setAddonGroups(mapApiModifiersToGroups(detail.modifiers ?? []));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAddonGroups([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showAddons, drink, activeVol, menuItems]);
 
   if (loading) {
     return (
@@ -120,7 +157,7 @@ export default function DrinkPage({ params }: PageProps) {
     );
   }
 
-  if (error || !drink) {
+  if (error || !drink || !activeVol) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[60vh] gap-4 px-8 text-center">
         <AlertCircle size={40} className="text-muted" />
@@ -132,13 +169,6 @@ export default function DrinkPage({ params }: PageProps) {
     );
   }
 
-  const activeVol =
-    selectedVolume &&
-    drink.volumes.find((v) => v.value === selectedVolume.value)
-      ? selectedVolume
-      : (drink.volumes[Math.floor(drink.volumes.length / 2)] ??
-        drink.volumes[0]);
-
   const TrendIcon =
     activeVol.trend === "up"
       ? TrendingUp
@@ -146,102 +176,81 @@ export default function DrinkPage({ params }: PageProps) {
         ? TrendingDown
         : Minus;
 
-  const drinkBeans = mockBeansForDrinkPrice(activeVol.price);
+  const drinkBeans = activeVol.priceBeans ?? 0;
 
   async function confirmPurchase(payload: {
     totalRub: number;
     totalBeans: number;
     labels: string[];
     paymentMethod: "card" | "beans";
-    temperatureId: string;
-    milkId: string;
-    singleSel: Record<string, string>;
-    multiSel: string[];
+    modifierIds: string[];
   }) {
-    if (!user || !drink) return;
+    if (!user || !drink || !activeVol) return;
     setBuying(true);
-    const soldAt = new Date().toISOString();
 
-    if (activeVol.apiDrinkId) {
-      postSale({
-        pos_item_id: `ce-app-${Date.now()}-${activeVol.apiDrinkId}`,
-        size_id: activeVol.value,
-        drink_id: activeVol.apiDrinkId,
-        quantity: 1,
-        sold_at: soldAt,
-        source: "app",
-      }).catch((err) =>
-        console.warn("[sale] ошибка регистрации продажи:", err),
-      );
+    const loyaltyItemId =
+      activeVol.loyaltyItemId ??
+      findLoyaltyItemId(menuItems, drink.id, activeVol.value);
+
+    if (!loyaltyItemId) {
+      setBuying(false);
+      alert("Не удалось определить позицию меню");
+      return;
     }
 
-    setTimeout(() => {
-      const expiresAt = new Date(
-        Date.now() + 7 * 24 * 60 * 60 * 1000,
-      ).toISOString();
-
-      // Build drink title with temperature prefix
-      const isCold = payload.temperatureId === "t-cold";
-      const drinkTitle = isCold ? `Айс ${drink.name}` : drink.name;
-
-      // Build milk line
-      const milkAdj = milkAdjective(payload.milkId);
-      const milkLine = `на ${milkAdj} молоке · ${activeVol.label} мл`;
-
-      // Build extras (syrups + other extras)
-      const syrupGroup = DRINK_ADDON_GROUPS.find((g) => g.id === "syrup");
-      const extrasGroup = DRINK_ADDON_GROUPS.find((g) => g.id === "extras");
-      const addonsLines: string[] = [];
-
-      if (syrupGroup) {
-        for (const o of syrupGroup.options) {
-          if (payload.multiSel.includes(o.id)) {
-            addonsLines.push(`сироп ${o.name.toLowerCase()}`);
-          }
+    try {
+      if (isDemo) {
+        if (
+          payload.paymentMethod === "beans" &&
+          user.loyaltyPoints < payload.totalBeans
+        ) {
+          setBuying(false);
+          alert("Недостаточно бинов на балансе");
+          return;
         }
+
+        const coupon = createDemoCoupon({
+          drink,
+          activeVol,
+          country,
+          totalRub: payload.totalRub,
+          totalBeans: payload.totalBeans,
+          paymentMethod: payload.paymentMethod,
+          addonLabels: payload.labels,
+        });
+
+        purchaseDemoCoupon(
+          coupon,
+          payload.paymentMethod === "beans" ? payload.totalBeans : undefined,
+        );
+
+        setBuying(false);
+        setBought(true);
+        setTimeout(() => {
+          setShowAddons(false);
+          setBought(false);
+          router.push("/coupons");
+        }, 1500);
+        return;
       }
-      if (extrasGroup) {
-        for (const o of extrasGroup.options) {
-          if (payload.multiSel.includes(o.id)) {
-            addonsLines.push(o.name.toLowerCase());
-          }
-        }
-      }
 
-      const addonsLine =
-        addonsLines.length > 0 ? addonsLines.join(", ") : null;
-
-      const totalLine =
-        payload.paymentMethod === "card"
-          ? `${Math.round(payload.totalRub)} ${country.currencySymbol}`
-          : `${payload.totalBeans} бинов`;
-
-      const purchaseSummary = [
-        drinkTitle,
-        milkLine,
-        addonsLine,
-        totalLine,
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      const couponData: Omit<Coupon, "id"> = {
-        drinkId: drink.id,
-        drinkName: drinkTitle,
-        category: drink.category,
-        purchasePrice: payload.totalRub,
-        currency: country.currency,
-        currencySymbol: country.currencySymbol,
-        purchasedAt: soldAt,
-        expiresAt,
-        status: "active",
-        qrData: `CE:${drink.id}:${payload.totalRub}:${activeVol.value}:${country.id}:${Date.now()}:${payload.totalBeans}`,
-        countryId: country.id,
-        volumeLabel: `${activeVol.label} мл`,
-        purchaseSummary,
-        paymentMethod: payload.paymentMethod,
+      const body = {
+        item_id: loyaltyItemId,
+        modifier_ids: payload.modifierIds.length > 0 ? payload.modifierIds : undefined,
       };
-      addCoupon(couponData);
+
+      if (payload.paymentMethod === "beans") {
+        const quote = await quoteBeanPurchase(body);
+        await purchaseCouponWithQuote(quote.quote_id);
+        await refreshCoupons();
+        await refreshUserData();
+      } else {
+        const quote = await quoteMoneyPurchase(body);
+        const payment = await createMoneyPayment(quote.quote_id);
+        window.location.href = payment.confirmation_url;
+        return;
+      }
+
       setBuying(false);
       setBought(true);
       setTimeout(() => {
@@ -249,7 +258,14 @@ export default function DrinkPage({ params }: PageProps) {
         setBought(false);
         router.push("/coupons");
       }, 1500);
-    }, 1200);
+    } catch (err) {
+      setBuying(false);
+      const message =
+        err instanceof LoyaltyApiError
+          ? err.detail ?? err.message
+          : "Не удалось оформить покупку";
+      alert(message);
+    }
   }
 
   return (
@@ -451,6 +467,7 @@ export default function DrinkPage({ params }: PageProps) {
           fats: drink.fats,
           carbs: drink.carbs,
         }}
+        groups={addonGroups}
         onConfirm={confirmPurchase}
         confirming={buying}
         bought={bought}

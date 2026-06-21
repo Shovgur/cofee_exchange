@@ -13,7 +13,7 @@ import { postSaleBatch, type ApiSaleBatchItem } from "@/lib/api";
 import {
   fetchAdminDrinksList,
   type AdminDrinkRead,
-} from "@/lib/api/admin-drinks";
+} from "@/lib/api/exchange/admin-drinks";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 /** Три объёма (как size_id для API). */

@@ -6,7 +6,7 @@ import { useCountry } from '@/contexts/CountryContext';
 import {
   usePrices,
 } from '@/contexts/PricesContext';
-import { PriceRefreshBanner } from '@/components/PriceRefreshBanner';
+import { PriceRefreshBanner } from '@/components/menu/PriceRefreshBanner';
 import { cn, formatPrice } from '@/lib/utils';
 import type { Drink, DrinkCategory } from '@/types';
 

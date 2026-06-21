@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from 'clsx';
-import type { DrinkCategory, FeedItemType, PriceTrend } from '@/types';
+import type { FeedItemType, PriceTrend } from '@/types';
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
@@ -52,25 +52,10 @@ export function formatDateTime(iso: string): string {
   });
 }
 
-export function trendColor(trend: PriceTrend): string {
-  if (trend === 'up') return 'text-success';
-  if (trend === 'down') return 'text-danger';
-  return 'text-muted';
-}
-
 export function trendBg(trend: PriceTrend): string {
   if (trend === 'up') return 'bg-success/12 text-success ring-1 ring-inset ring-success/25';
   if (trend === 'down') return 'bg-danger/12 text-danger ring-1 ring-inset ring-danger/25';
   return 'bg-foreground/5 text-muted ring-1 ring-inset ring-foreground/15';
-}
-
-export function categoryLabel(cat: DrinkCategory): string {
-  const map: Record<DrinkCategory, string> = {
-    coffee: 'Кофе',
-    lemonade: 'Лимонады',
-    tea: 'Чаи',
-  };
-  return map[cat] ?? cat;
 }
 
 export function feedTypeLabel(type: FeedItemType): string {
@@ -95,36 +80,6 @@ export function feedTypeColor(type: FeedItemType): string {
   return map[type] ?? '';
 }
 
-/** Рассчитывает время до следующего обновления цен.
- *  intervalMinutes — интервал обновления в минутах (по умолчанию 5). */
-export function getNextPriceUpdateAt(intervalMinutes = 5): number {
-  const now = Date.now();
-  const intervalMs = intervalMinutes * 60 * 1000;
-  return Math.ceil(now / intervalMs) * intervalMs;
-}
-
-/** Форматирует оставшееся время в мм:сс */
-export function formatCountdown(ms: number): string {
-  const totalSecs = Math.max(0, Math.floor(ms / 1000));
-  const m = Math.floor(totalSecs / 60);
-  const s = totalSecs % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-/** Форматирует обратный отсчёт до даты как «Xд Yч Zм» или «мм:сс» если < 1 часа */
-export function formatIpoCountdown(isoDate: string): string {
-  const diff = Math.max(0, new Date(isoDate).getTime() - Date.now());
-  const totalSecs = Math.floor(diff / 1000);
-  const days = Math.floor(totalSecs / 86400);
-  const hours = Math.floor((totalSecs % 86400) / 3600);
-  const mins = Math.floor((totalSecs % 3600) / 60);
-  const secs = totalSecs % 60;
-
-  if (days > 0) return `${days}д ${hours}ч ${mins}м`;
-  if (hours > 0) return `${hours}ч ${mins}м ${secs}с`;
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
-
 export function daysUntil(iso: string): number {
   const diff = new Date(iso).getTime() - Date.now();
   return Math.max(0, Math.ceil(diff / (24 * 60 * 60 * 1000)));
@@ -133,6 +88,7 @@ export function daysUntil(iso: string): number {
 export function couponStatusLabel(status: string): string {
   const map: Record<string, string> = {
     active: 'Активен',
+    reserved: 'Зарезервирован',
     used: 'Использован',
     expired: 'Просрочен',
     cancelled: 'Отменён',
@@ -143,6 +99,7 @@ export function couponStatusLabel(status: string): string {
 export function couponStatusColor(status: string): string {
   const map: Record<string, string> = {
     active: 'bg-success/20 text-success',
+    reserved: 'bg-orange/15 text-orange',
     used: 'bg-muted/20 text-muted',
     expired: 'bg-danger/20 text-danger',
     cancelled: 'bg-danger/10 text-danger/70',
@@ -155,24 +112,4 @@ export function formatChartTime(timestamp: number): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-export function getDistanceKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): string {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const km = R * c;
-  if (km < 1) return `${Math.round(km * 1000)} м`;
-  return `${km.toFixed(1)} км`;
 }

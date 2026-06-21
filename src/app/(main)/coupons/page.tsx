@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
 import AuthGate from '@/components/auth/AuthGate';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
+import DecorativeBarcode from '@/components/ui/DecorativeBarcode';
 import { cn, couponStatusLabel, couponStatusColor, formatDateTime, formatFullDate, daysUntil } from '@/lib/utils';
 import type { Coupon, CouponStatus } from '@/types';
 import { Ticket, Calendar, Clock, Rocket } from 'lucide-react';
@@ -23,40 +24,15 @@ function DrinkEmoji({ category }: { category: string }) {
   return <>🍵</>;
 }
 
-/** Static barcode generated deterministically from a string value */
-function StaticBarcode({ value }: { value: string }) {
-  const seed = value.split('').reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), 0);
-  const bars: { width: number; height: number }[] = [];
-  for (let i = 0; i < 56; i++) {
-    const v = Math.abs(Math.sin(seed + i * 2.3)) * 100;
-    bars.push({
-      width: 1 + Math.round(v % 3),
-      height: 32 + Math.round((Math.abs(Math.cos(seed + i * 1.1)) * 100) % 24),
-    });
-  }
-  return (
-    <div className="bg-white rounded-2xl p-5 flex flex-col items-center gap-3">
-      <div className="flex items-end gap-[1.5px] h-14">
-        {bars.map((b, i) => (
-          <div
-            key={i}
-            className="rounded-[1px] bg-neutral-900"
-            style={{ width: `${b.width}px`, height: `${b.height}px` }}
-          />
-        ))}
-      </div>
-      <p className="font-mono text-xs tracking-widest text-neutral-700 tabular-nums">
-        {value.replace(/[^A-Z0-9]/gi, '').slice(0, 16).toUpperCase().replace(/(.{4})/g, '$1 ').trim()}
-      </p>
-    </div>
-  );
-}
-
 export default function CouponsPage() {
-  const { coupons } = useAuth();
+  const { coupons, refreshCoupons } = useAuth();
   const { country } = useCountry();
   const [filter, setFilter] = useState<'all' | CouponStatus>('all');
   const [selected, setSelected] = useState<Coupon | null>(null);
+
+  useEffect(() => {
+    void refreshCoupons();
+  }, [refreshCoupons]);
 
   const visible = coupons
     .filter((c) => c.countryId === country.id)
@@ -190,7 +166,7 @@ export default function CouponsPage() {
               </div>
             )}
 
-            <StaticBarcode value={selected.qrData} />
+            <DecorativeBarcode value={selected.qrData} />
 
             <p className="text-center text-sm text-muted">
               Покажите штрихкод кассиру для получения напитка

@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { X, Navigation, Clock, Star, MapPin, Search } from "lucide-react";
-import { getAllShops, isShopOpen } from "@/lib/mock-data";
+import { getAllShops, isShopOpen } from "@/lib/shops";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import type { CoffeeShop } from "@/types";

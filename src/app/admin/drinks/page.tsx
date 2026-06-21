@@ -13,7 +13,7 @@ import {
   Activity,
   ActivityIcon,
 } from 'lucide-react';
-import { fetchAdminDrinksList, postAdminDrinkToggleActive, type AdminDrinkRead } from '@/lib/api/admin-drinks';
+import { fetchAdminDrinksList, postAdminDrinkToggleActive, type AdminDrinkRead } from '@/lib/api/exchange/admin-drinks';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 function Badge({ children, color }: { children: React.ReactNode; color: string }) {

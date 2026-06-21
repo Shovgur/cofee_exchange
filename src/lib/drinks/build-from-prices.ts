@@ -1,13 +1,12 @@
 import type { Drink, DrinkCategory, PriceTrend, VolumePrice } from '@/types';
-import { parsePrice, type ApiPriceItem } from '@/lib/api';
+import { parsePrice, type ApiPriceItem } from '@/lib/api/exchange';
 import {
   findTemplateById,
   findTemplateByName,
   generatePriceHistory,
   computeTrend,
   normalizeDrinkName,
-} from '@/lib/mock-data/menu';
-
+} from '@/lib/drinks/catalog';
 
 const BACKEND_NAME_TO_CATEGORY: Record<string, DrinkCategory> = {
   эспрессо: 'coffee',
@@ -35,7 +34,13 @@ export function inferDrinkCategoryFromApiName(name: string): DrinkCategory {
   return 'coffee';
 }
 
-// ─── Route ID helpers
+export function inferDrinkCategoryFromApiCategory(category: string): DrinkCategory {
+  const key = normalizeDrinkName(category);
+  if (key.includes('чай')) return 'tea';
+  if (key.includes('лимонад') || key.includes('лимон')) return 'lemonade';
+  if (key.includes('кофе')) return 'coffee';
+  return inferDrinkCategoryFromApiName(category);
+}
 
 const CYR_TO_LAT: [string, string][] = [
   ['а', 'a'], ['б', 'b'], ['в', 'v'], ['г', 'g'], ['д', 'd'], ['е', 'e'], ['ё', 'e'], ['ж', 'zh'],
@@ -59,7 +64,6 @@ function apiBasePrice(entry: ApiPriceItem): number {
   return parsePrice(entry.base_price ?? entry.defaultSalePrice);
 }
 
-/** Литраж для сортировки и seed: сначала unitCapacity, иначе парсинг volume */
 function entryCapacityLiters(entry: ApiPriceItem): number {
   if (typeof entry.unitCapacity === 'number' && Number.isFinite(entry.unitCapacity)) {
     return entry.unitCapacity;
@@ -68,7 +72,6 @@ function entryCapacityLiters(entry: ApiPriceItem): number {
   return Number.isFinite(v) ? v : 0;
 }
 
-/** Стабильная строка для VolumePrice.value / ключей UI */
 function litersToValueKey(liters: number): string {
   if (!Number.isFinite(liters)) return '0';
   const s = liters.toFixed(4).replace(/\.?0+$/, '');
@@ -81,7 +84,6 @@ function entryVolumeValue(entry: ApiPriceItem): string {
   return litersToValueKey(entryCapacityLiters(entry));
 }
 
-/** Подпись объёма в миллилитрах для UI (200 / 400 / 600). */
 function entryVolumeLabel(entry: ApiPriceItem): string {
   const liters = entryCapacityLiters(entry);
   if (liters > 0) return `${Math.round(liters * 1000)}`;
@@ -93,8 +95,6 @@ function entryVolumeLabel(entry: ApiPriceItem): string {
   }
   return '0';
 }
-
-// ─── Data transformation: API → UI model
 
 export function buildDrinkFromGroup(
   entries: ApiPriceItem[],
@@ -165,7 +165,6 @@ export function buildDrinkFromGroup(
   };
 }
 
-/** Все записи API для конкретной страницы напитка (по ID шаблона, slug или drink_id). */
 export function getPriceEntriesForDrinkRoute(
   drinkRouteParam: string,
   prices: ApiPriceItem[],

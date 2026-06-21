@@ -9,8 +9,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { fetchAllPrices, type ApiPriceItem } from "@/lib/api";
-import { buildDrinkFromGroup } from "@/lib/api/menu";
+import {
+  buildDrinksFromLoyaltyMenu,
+  fetchMenu,
+  loyaltyMenuToPriceItems,
+  type ApiMenuItem,
+} from "@/lib/api/loyalty";
 import { useCountry } from "@/contexts/CountryContext";
 import type { Drink, PriceTrend } from "@/types";
 
@@ -23,11 +27,10 @@ function msUntilNextPollBoundary(periodMs: number, minMs = 400): number {
   return Math.max(until, minMs);
 }
 
-// ─── Context shape ────────────────────────────────────────────────────────────
-
 interface PricesContextValue {
   drinks: Drink[];
-  prices: ApiPriceItem[];
+  prices: ReturnType<typeof loyaltyMenuToPriceItems>;
+  menuItems: ApiMenuItem[];
   loading: boolean;
   error: string | null;
   flashMap: Map<string, PriceTrend>;
@@ -43,28 +46,23 @@ export function usePrices(): PricesContextValue {
   return ctx;
 }
 
-// ─── Provider ────────────────────────────────────────────────────────────────
-
 export function PricesProvider({ children }: { children: ReactNode }) {
   const { country } = useCountry();
 
   const [drinks, setDrinks] = useState<Drink[]>([]);
-  const [prices, setPrices] = useState<ApiPriceItem[]>([]);
+  const [prices, setPrices] = useState<ReturnType<typeof loyaltyMenuToPriceItems>>([]);
+  const [menuItems, setMenuItems] = useState<ApiMenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [flashMap, setFlashMap] = useState<Map<string, PriceTrend>>(new Map());
   const [flashGen, setFlashGen] = useState(0);
-  const [secondsUntilNextPoll, setSecondsUntilNextPoll] = useState<
-    number | null
-  >(null);
+  const [secondsUntilNextPoll, setSecondsUntilNextPoll] = useState<number | null>(null);
 
-  const abortRef = useRef<AbortController | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSuccessfulPollAtRef = useRef<number | null>(null);
   const nextScheduledPollAtRef = useRef<number | null>(null);
   const pollGenerationRef = useRef(0);
-  /** актуальный doFetch для таймера; обновляется в рендере, без ожидания useEffect */
   const doFetchRef = useRef<(silent?: boolean) => void>(() => {});
   const mountedRef = useRef(false);
 
@@ -85,6 +83,29 @@ export function PricesProvider({ children }: { children: ReactNode }) {
     }, delay);
   }, []);
 
+  const applyDrinksWithFlash = useCallback((built: Drink[], silent: boolean) => {
+    setDrinks((prev) => {
+      if (prev.length > 0 && silent) {
+        const map = new Map<string, PriceTrend>();
+        for (const nd of built) {
+          const od = prev.find((d) => d.id === nd.id);
+          if (!od) continue;
+          const anyVolumeChanged =
+            od.currentPrice !== nd.currentPrice ||
+            nd.volumes.some((nv, i) => od.volumes[i]?.price !== nv.price);
+          if (anyVolumeChanged) map.set(nd.id, nd.trend);
+        }
+        if (map.size > 0) {
+          if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+          setFlashMap(map);
+          setFlashGen((g) => g + 1);
+          flashTimerRef.current = setTimeout(() => setFlashMap(new Map()), 1200);
+        }
+      }
+      return built;
+    });
+  }, []);
+
   const doFetch = useCallback(
     (silent = false) => {
       const gen = ++pollGenerationRef.current;
@@ -101,75 +122,27 @@ export function PricesProvider({ children }: { children: ReactNode }) {
       }
       setError(null);
 
-      abortRef.current?.abort();
-      const ctrl = new AbortController();
-      abortRef.current = ctrl;
-
-      fetchAllPrices(ctrl.signal)
-        .then((data) => {
-          if (!mountedRef.current) return;
-          if (gen !== pollGenerationRef.current) return;
-
-          const groups = new Map<string, ApiPriceItem[]>();
-          for (const item of data.prices) {
-            const existing = groups.get(item.name) ?? [];
-            existing.push(item);
-            groups.set(item.name, existing);
-          }
-
-          const built: Drink[] = Array.from(groups.values())
-            .map((entries) => buildDrinkFromGroup(entries, country.id))
-            .filter((d): d is Drink => d !== null)
-            .sort((a, b) => a.name.localeCompare(b.name, "ru"));
-
-          // Flash только на авто-обновлении по таймеру
-          setDrinks((prev) => {
-            if (prev.length > 0 && silent) {
-              const map = new Map<string, PriceTrend>();
-              for (const nd of built) {
-                const od = prev.find((d) => d.id === nd.id);
-                if (!od) continue;
-                // Проверяем любой объём — не только средний (currentPrice)
-                const anyVolumeChanged =
-                  od.currentPrice !== nd.currentPrice ||
-                  nd.volumes.some((nv, i) => od.volumes[i]?.price !== nv.price);
-                if (anyVolumeChanged) {
-                  map.set(nd.id, nd.trend);
-                }
-              }
-              if (map.size > 0) {
-                if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
-                setFlashMap(map);
-                setFlashGen((g) => g + 1);
-                flashTimerRef.current = setTimeout(
-                  () => setFlashMap(new Map()),
-                  1200,
-                );
-              }
-            }
-            return built;
-          });
-
-          setPrices(data.prices);
+      fetchMenu(country.id)
+        .then((items) => {
+          if (!mountedRef.current || gen !== pollGenerationRef.current) return;
+          const built = buildDrinksFromLoyaltyMenu(items, country.id);
+          applyDrinksWithFlash(built, silent);
+          setPrices(loyaltyMenuToPriceItems(items));
+          setMenuItems(items);
           setLoading(false);
-
           lastSuccessfulPollAtRef.current = Date.now();
         })
         .catch((err) => {
-          if (!mountedRef.current) return;
-          if (gen !== pollGenerationRef.current) return;
-          if (ctrl.signal.aborted) return;
-          setError(err instanceof Error ? err.message : "Ошибка загрузки цен");
+          if (!mountedRef.current || gen !== pollGenerationRef.current) return;
+          setError(err instanceof Error ? err.message : "Ошибка загрузки меню");
           setLoading(false);
         })
         .finally(() => {
-          // Не проверяем ctrl.signal.aborted: отменённый запрос без перезапуска
-          // обрывал цепочку опроса. Живым остаётся только последний fetch.
           if (!mountedRef.current) return;
           scheduleNextAutoPoll();
         });
     },
-    [country.id, scheduleNextAutoPoll],
+    [applyDrinksWithFlash, country.id, scheduleNextAutoPoll],
   );
 
   doFetchRef.current = doFetch;
@@ -180,7 +153,6 @@ export function PricesProvider({ children }: { children: ReactNode }) {
     return () => {
       mountedRef.current = false;
       pollGenerationRef.current += 1;
-      abortRef.current?.abort();
       if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
       if (pollTimeoutRef.current != null) {
         clearTimeout(pollTimeoutRef.current);
@@ -193,17 +165,14 @@ export function PricesProvider({ children }: { children: ReactNode }) {
     const id = setInterval(() => {
       const target = nextScheduledPollAtRef.current;
       if (target != null) {
-        const sec = Math.max(0, Math.ceil((target - Date.now()) / 1000));
-        setSecondsUntilNextPoll(sec);
+        setSecondsUntilNextPoll(Math.max(0, Math.ceil((target - Date.now()) / 1000)));
         return;
       }
       const base = lastSuccessfulPollAtRef.current;
       if (base === null) return;
-      const sec = Math.max(
-        0,
-        Math.ceil((base + PRICES_POLL_INTERVAL_MS - Date.now()) / 1000),
+      setSecondsUntilNextPoll(
+        Math.max(0, Math.ceil((base + PRICES_POLL_INTERVAL_MS - Date.now()) / 1000)),
       );
-      setSecondsUntilNextPoll(sec);
     }, 500);
     return () => clearInterval(id);
   }, []);
@@ -213,6 +182,7 @@ export function PricesProvider({ children }: { children: ReactNode }) {
       value={{
         drinks,
         prices,
+        menuItems,
         loading,
         error,
         flashMap,

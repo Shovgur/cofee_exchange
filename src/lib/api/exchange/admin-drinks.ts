@@ -1,4 +1,4 @@
-import { buildApiPath } from '@/lib/api';
+import { buildApiPath } from '@/lib/api/exchange/client';
 
 // ─── Types (из OpenAPI DrinkRead, DrinkCreate, DrinkUpdate, …) ────────────────
 

@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import ProfileBarcode from '@/components/profile/ProfileBarcode';
 import {
   User,
   Bell,
@@ -53,37 +54,8 @@ function NotificationItem({ title, subtitle, enabled, onToggle }: {
   );
 }
 
-function ProfileBarcode({ value }: { value: string }) {
-  const bars = useMemo(() => {
-    const seed = value.split('').reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), 0);
-    return Array.from({ length: 52 }, (_, i) => ({
-      width: 1 + Math.round(Math.abs(Math.sin(seed + i * 2.3)) * 100 % 3),
-      height: 28 + Math.round(Math.abs(Math.cos(seed + i * 1.1)) * 100 % 22),
-    }));
-  }, [value]);
-
-  const displayCode = value.replace(/\D/g, '').slice(-12).replace(/(.{4})/g, '$1 ').trim();
-
-  return (
-    <div className="bg-white rounded-2xl px-5 py-4 flex flex-col items-center gap-2">
-      <div className="flex items-end gap-[1.5px] h-12">
-        {bars.map((b, i) => (
-          <div
-            key={i}
-            className="rounded-[1px] bg-neutral-900"
-            style={{ width: `${b.width}px`, height: `${b.height}px` }}
-          />
-        ))}
-      </div>
-      <p className="font-mono text-xs tracking-[0.18em] text-neutral-600 tabular-nums">
-        {displayCode || '0000 0000 0000'}
-      </p>
-    </div>
-  );
-}
-
 export default function ProfilePage() {
-  const { user, logout, coupons } = useAuth();
+  const { user, logout, coupons, refreshUserData, isDemo } = useAuth();
   const { country } = useCountry();
   const router = useRouter();
 
@@ -99,10 +71,15 @@ export default function ProfilePage() {
     orderStatus: true,
   });
 
+  useEffect(() => {
+    void refreshUserData();
+  }, [refreshUserData]);
+
   const barcodeValue = useMemo(() => {
-    if (!user) return '000000000000';
+    if (!user) return '00000000';
+    if (user.userCode) return user.userCode;
     const d = user.phone.replace(/\D/g, '');
-    return (d.slice(-12) || user.id.replace(/\D/g, '').slice(-12)).padStart(12, '0');
+    return (d.slice(-8) || user.id.replace(/\D/g, '').slice(-8)).padStart(8, '0');
   }, [user]);
 
   const userCoupons = coupons.filter((c) => c.countryId === country.id);
@@ -125,6 +102,11 @@ export default function ProfilePage() {
               <div className="min-w-0">
                 <h1 className="text-xl font-bold truncate">{user.name}</h1>
                 <p className="text-sm text-muted truncate">{user.phone}</p>
+                {isDemo && (
+                  <span className="mt-1 inline-block rounded-full bg-orange/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-orange">
+                    Демо-режим
+                  </span>
+                )}
               </div>
             </div>
 
@@ -374,8 +356,8 @@ export default function ProfilePage() {
           <Button
             variant="danger"
             fullWidth
-            onClick={() => {
-              logout();
+            onClick={async () => {
+              await logout();
               router.push('/feed');
             }}
           >

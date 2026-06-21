@@ -142,7 +142,11 @@ export default function DesktopSidebar() {
           <Button
             variant="danger"
             fullWidth
-            onClick={() => { logout(); setShowLogout(false); router.push('/feed'); }}
+            onClick={async () => {
+              await logout();
+              setShowLogout(false);
+              router.push('/feed');
+            }}
           >
             Выйти
           </Button>

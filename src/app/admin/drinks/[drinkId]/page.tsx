@@ -23,7 +23,7 @@ import {
   postAdminDrinkManualSet,
   postAdminDrinkToggleActive,
   type AdminDrinkRead,
-} from "@/lib/api/admin-drinks";
+} from "@/lib/api/exchange/admin-drinks";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 

@@ -23,6 +23,10 @@ export interface VolumePrice {
   /** Базовая цена с бэка для этого объёма (если есть). */
   basePrice?: number;
   apiDrinkId?: string;
+  /** ID позиции в API лояльности (для котировки/покупки) */
+  loyaltyItemId?: string;
+  /** Стоимость в Бинах с бэкенда */
+  priceBeans?: number | null;
   change: number;        
   trend: PriceTrend;
   priceHistory: PricePoint[];
@@ -116,7 +120,7 @@ export interface CoffeeShop {
 }
 
 // Coupons
-export type CouponStatus = 'active' | 'used' | 'expired' | 'cancelled';
+export type CouponStatus = 'active' | 'used' | 'expired' | 'cancelled' | 'reserved';
 
 export interface Coupon {
   id: string;
@@ -136,8 +140,10 @@ export interface Coupon {
   volumeLabel?: string;
   /** Полное текстовое описание состава заказа (напиток, объём, добавки). */
   purchaseSummary?: string;
-  /** Способ оплаты в демо-флоу */
+  /** Способ оплаты */
   paymentMethod?: 'card' | 'beans';
+  /** Стоимость в Бинах (если покупка за Бины) */
+  priceBeans?: number | null;
 }
 
 // User
@@ -148,6 +154,11 @@ export interface User {
   loyaltyLevel: string;
   loyaltyPoints: number;
   countryId: string;
+  /** 8-значный код для штрихкода (API лояльности) */
+  userCode?: string;
+  profileCompleted?: boolean;
+  email?: string;
+  birthDate?: string;
 }
 
 // Purchase notification

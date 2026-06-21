@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -10,13 +10,15 @@ import {
   isValidNationalDigits,
 } from '@/lib/phone-codes';
 import { cn } from '@/lib/utils';
-import { useAuth, createDemoUser } from '@/contexts/AuthContext';
+import { isDemoAuthEnabled } from '@/lib/auth/demo-auth';
+import { LoyaltyApiError, loyaltyErrorMessage, requestSmsCode } from '@/lib/api/loyalty';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
 
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const { login } = useAuth();
+  const { loginDemo } = useAuth();
   const { country } = useCountry();
   const isRegister = params.get('mode') === 'register';
 
@@ -26,6 +28,14 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [dialOpen, setDialOpen] = useState(false);
+  const [cooldownSec, setCooldownSec] = useState(0);
+  const submittingRef = useRef(false);
+
+  useEffect(() => {
+    if (cooldownSec <= 0) return;
+    const t = setTimeout(() => setCooldownSec((v) => v - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldownSec]);
 
   const dial = DIAL_OPTIONS.find((d) => d.code === dialCode) ?? DIAL_OPTIONS[0];
   const nationalDigits = formatNationalLoose(national);
@@ -35,7 +45,8 @@ function LoginForm() {
     setError('');
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
+    if (submittingRef.current || loading || cooldownSec > 0) return;
     if (!isValidNationalDigits(nationalDigits)) {
       setError('Введите номер без кода страны (8–15 цифр)');
       return;
@@ -45,18 +56,24 @@ function LoginForm() {
       return;
     }
     const fullPhone = `${dialCode.replace(/\s/g, '')}${nationalDigits}`;
+    submittingRef.current = true;
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    setError('');
+
+    try {
+      await requestSmsCode(fullPhone);
       router.push(
         `/auth/verify?phone=${encodeURIComponent(fullPhone)}&name=${encodeURIComponent(name.trim())}`,
       );
-    }, 800);
-  }
-
-  function handleDemoLogin() {
-    login(createDemoUser(country.id));
-    router.replace('/feed');
+    } catch (err) {
+      setError(loyaltyErrorMessage(err, 'Не удалось отправить SMS'));
+      if (err instanceof LoyaltyApiError && err.retryAfterSeconds) {
+        setCooldownSec(err.retryAfterSeconds);
+      }
+    } finally {
+      submittingRef.current = false;
+      setLoading(false);
+    }
   }
 
   return (
@@ -163,36 +180,40 @@ function LoginForm() {
           <Button
             fullWidth
             size="lg"
-            onClick={handleSubmit}
+            onClick={() => void handleSubmit()}
             loading={loading}
-            disabled={!isValidNationalDigits(nationalDigits)}
+            disabled={!isValidNationalDigits(nationalDigits) || cooldownSec > 0}
           >
-            {loading ? 'Отправляем SMS…' : 'Получить код'}
+            {loading
+              ? 'Отправляем SMS…'
+              : cooldownSec > 0
+                ? `Повторить через ${cooldownSec}с`
+                : 'Получить код'}
           </Button>
 
-          <div className="relative py-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
+          {isDemoAuthEnabled() && !isRegister && (
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted uppercase tracking-wide">или</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <Button
+                fullWidth
+                size="lg"
+                variant="secondary"
+                onClick={() => {
+                  loginDemo(country.id);
+                  router.replace('/feed');
+                }}
+              >
+                Демо-вход (без SMS)
+              </Button>
+              <p className="text-[11px] text-muted text-center leading-relaxed">
+                Тестовый аккаунт с 5000 бинов. Меню — с API, покупки и купоны — локально.
+              </p>
             </div>
-            <div className="relative flex justify-center text-xs uppercase tracking-wide">
-              <span className="bg-bg px-3 text-muted">или</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Button
-              fullWidth
-              size="lg"
-              variant="secondary"
-              type="button"
-              onClick={handleDemoLogin}
-            >
-              Войти в демо (без SMS)
-            </Button>
-            <p className="text-[11px] text-muted text-center leading-relaxed">
-              Реальных SMS нет — для просмотра приложения нажмите кнопку выше. Меню и цены зависят от выбранной страны в профиле или на ленте.
-            </p>
-          </div>
+          )}
         </div>
 
         <div className="mt-8 text-center">

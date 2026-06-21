@@ -4,21 +4,21 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, MessageSquare, CheckCircle } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import { useAuth, buildMockUser } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
+import { LoyaltyApiError, loyaltyErrorMessage, requestSmsCode, verifySmsCode } from '@/lib/api/loyalty';
 import { cn } from '@/lib/utils';
 
-const CODE_LENGTH = 4;
-const RESEND_DELAY = 30;
+const CODE_LENGTH = 6;
+const RESEND_DELAY = 60;
 
 function VerifyForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const { login } = useAuth();
+  const { loginWithTokens } = useAuth();
   const { country } = useCountry();
 
   const phone = params.get('phone') ?? '+7';
-  const name = params.get('name') ?? '';
 
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
@@ -49,7 +49,7 @@ function VerifyForm() {
     }
 
     if (char && next.filter(Boolean).length === CODE_LENGTH) {
-      setTimeout(() => handleVerify(next), 100);
+      setTimeout(() => void handleVerify(next), 100);
     }
   }
 
@@ -59,36 +59,45 @@ function VerifyForm() {
     }
   }
 
-  function handleVerify(code = digits) {
+  async function handleVerify(code = digits) {
     const fullCode = code.join('');
     if (fullCode.length < CODE_LENGTH) return;
 
     setLoading(true);
-    setTimeout(() => {
-      if (fullCode === '0000') {
-        setLoading(false);
-        setError('Неверный код. Попробуйте снова.');
-        setDigits(Array(CODE_LENGTH).fill(''));
-        inputRefs.current[0]?.focus();
-        return;
-      }
+    setError('');
 
-      const user = buildMockUser(phone, name || 'Пользователь', country.id);
-      login(user);
-      setLoading(false);
+    try {
+      const tokens = await verifySmsCode(phone, fullCode);
+      await loginWithTokens(tokens, country.id);
       setSuccess(true);
-
       setTimeout(() => {
-        router.replace('/feed');
+        router.replace(tokens.is_new ? '/profile' : '/feed');
       }, 1200);
-    }, 1000);
+    } catch (err) {
+      setError(loyaltyErrorMessage(err, 'Не удалось подтвердить код'));
+      setDigits(Array(CODE_LENGTH).fill(''));
+      inputRefs.current[0]?.focus();
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleResend() {
+  async function handleResend() {
     if (resendTimer > 0) return;
-    setResendTimer(RESEND_DELAY);
     setDigits(Array(CODE_LENGTH).fill(''));
     inputRefs.current[0]?.focus();
+    try {
+      await requestSmsCode(phone);
+      setResendTimer(RESEND_DELAY);
+      setError('');
+    } catch (err) {
+      setError(loyaltyErrorMessage(err, 'Не удалось отправить код повторно'));
+      if (err instanceof LoyaltyApiError && err.retryAfterSeconds) {
+        setResendTimer(err.retryAfterSeconds);
+      } else {
+        setResendTimer(RESEND_DELAY);
+      }
+    }
   }
 
   if (success) {
@@ -122,15 +131,12 @@ function VerifyForm() {
         </div>
 
         <h1 className="text-2xl font-bold mb-1">Введите код</h1>
-        <p className="text-sm text-muted mb-2">
+        <p className="text-sm text-muted mb-8">
           Отправили SMS на номер{' '}
           <span className="text-foreground font-medium">{phone}</span>
         </p>
-        <p className="text-xs text-muted mb-8">
-          Реального SMS нет — это демо. Введите любые 4 цифры, кроме 0000
-        </p>
 
-        <div className="flex gap-3 justify-center mb-6">
+        <div className="flex gap-2 justify-center mb-6">
           {Array(CODE_LENGTH).fill(null).map((_, i) => (
             <input
               key={i}
@@ -142,7 +148,7 @@ function VerifyForm() {
               onChange={(e) => handleDigit(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
               className={cn(
-                'w-16 h-16 rounded-2xl text-center text-2xl font-bold bg-surface border-2 outline-none transition-colors',
+                'w-11 h-14 rounded-2xl text-center text-xl font-bold bg-surface border-2 outline-none transition-colors',
                 digits[i] ? 'border-orange text-foreground' : 'border-border text-muted',
                 error && 'border-danger',
               )}
@@ -155,7 +161,7 @@ function VerifyForm() {
         <Button
           fullWidth
           size="lg"
-          onClick={() => handleVerify()}
+          onClick={() => void handleVerify()}
           loading={loading}
           disabled={digits.filter(Boolean).length < CODE_LENGTH}
         >
@@ -168,7 +174,7 @@ function VerifyForm() {
               Повторно через <span className="text-foreground font-medium">{resendTimer}с</span>
             </p>
           ) : (
-            <button onClick={handleResend} className="text-sm text-orange font-medium">
+            <button onClick={() => void handleResend()} className="text-sm text-orange font-medium">
               Отправить код повторно
             </button>
           )}
