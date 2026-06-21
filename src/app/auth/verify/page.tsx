@@ -6,6 +6,12 @@ import { ArrowLeft, MessageSquare, CheckCircle } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
+import {
+  getPhoneSession,
+  isPhoneSessionCacheEnabled,
+  markSmsRequested,
+  savePhoneSession,
+} from '@/lib/auth/phone-session-cache';
 import { LoyaltyApiError, loyaltyErrorMessage, requestSmsCode, verifySmsCode } from '@/lib/api/loyalty';
 import { cn } from '@/lib/utils';
 
@@ -19,13 +25,45 @@ function VerifyForm() {
   const { country } = useCountry();
 
   const phone = params.get('phone') ?? '+7';
+  const cachedFlow = params.get('cached') === '1';
 
-  const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
+  const [digits, setDigits] = useState<string[]>(() => {
+    if (!isPhoneSessionCacheEnabled()) return Array(CODE_LENGTH).fill('');
+    const lastCode = getPhoneSession(phone)?.lastCode;
+    if (!lastCode || lastCode.length !== CODE_LENGTH) return Array(CODE_LENGTH).fill('');
+    return lastCode.split('');
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [resendTimer, setResendTimer] = useState(RESEND_DELAY);
+  const [resendTimer, setResendTimer] = useState(cachedFlow ? 0 : RESEND_DELAY);
+  const [tryingCache, setTryingCache] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const cacheAttempted = useRef(false);
+
+  useEffect(() => {
+    if (!isPhoneSessionCacheEnabled() || cacheAttempted.current) return;
+    cacheAttempted.current = true;
+
+    async function tryCacheLogin() {
+      const session = getPhoneSession(phone);
+      if (!session?.tokens.refresh_token) return;
+      setTryingCache(true);
+      try {
+        await loginWithTokens(session.tokens, country.id, phone);
+        setSuccess(true);
+        setTimeout(() => {
+          router.replace(session.tokens.is_new ? '/profile' : '/feed');
+        }, 800);
+      } catch {
+        /* нужен код из SMS */
+      } finally {
+        setTryingCache(false);
+      }
+    }
+
+    void tryCacheLogin();
+  }, [phone, country.id, loginWithTokens, router]);
 
   useEffect(() => {
     inputRefs.current[0]?.focus();
@@ -68,7 +106,10 @@ function VerifyForm() {
 
     try {
       const tokens = await verifySmsCode(phone, fullCode);
-      await loginWithTokens(tokens, country.id);
+      if (isPhoneSessionCacheEnabled()) {
+        savePhoneSession(phone, tokens, fullCode);
+      }
+      await loginWithTokens(tokens, country.id, phone);
       setSuccess(true);
       setTimeout(() => {
         router.replace(tokens.is_new ? '/profile' : '/feed');
@@ -88,6 +129,9 @@ function VerifyForm() {
     inputRefs.current[0]?.focus();
     try {
       await requestSmsCode(phone);
+      if (isPhoneSessionCacheEnabled()) {
+        markSmsRequested(phone);
+      }
       setResendTimer(RESEND_DELAY);
       setError('');
     } catch (err) {
@@ -100,15 +144,19 @@ function VerifyForm() {
     }
   }
 
-  if (success) {
+  if (success || tryingCache) {
     return (
       <div className="flex flex-col items-center justify-center min-h-lvh gap-5 bg-bg max-w-lg mx-auto px-6 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]">
         <div className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center">
           <CheckCircle size={40} className="text-success" />
         </div>
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-1">Добро пожаловать!</h2>
-          <p className="text-muted text-sm">Вход выполнен успешно</p>
+          <h2 className="text-2xl font-bold mb-1">
+            {tryingCache ? 'Входим…' : 'Добро пожаловать!'}
+          </h2>
+          <p className="text-muted text-sm">
+            {tryingCache ? 'Проверяем сохранённую сессию' : 'Вход выполнен успешно'}
+          </p>
         </div>
       </div>
     );
@@ -132,8 +180,17 @@ function VerifyForm() {
 
         <h1 className="text-2xl font-bold mb-1">Введите код</h1>
         <p className="text-sm text-muted mb-8">
-          Отправили SMS на номер{' '}
-          <span className="text-foreground font-medium">{phone}</span>
+          {cachedFlow
+            ? 'Повторная SMS не отправлялась — введите код из прошлого сообщения или запросите новый.'
+            : 'Отправили SMS на номер'}{' '}
+          {!cachedFlow && (
+            <>
+              <span className="text-foreground font-medium">{phone}</span>
+            </>
+          )}
+          {cachedFlow && (
+            <span className="text-foreground font-medium block mt-1">{phone}</span>
+          )}
         </p>
 
         <div className="flex gap-2 justify-center mb-6">

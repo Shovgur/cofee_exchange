@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -11,6 +11,13 @@ import {
 } from '@/lib/phone-codes';
 import { cn } from '@/lib/utils';
 import { isDemoAuthEnabled } from '@/lib/auth/demo-auth';
+import {
+  getPhoneSession,
+  hasCachedPhoneSession,
+  isPhoneSessionCacheEnabled,
+  markSmsRequested,
+  shouldSkipSmsRequest,
+} from '@/lib/auth/phone-session-cache';
 import { LoyaltyApiError, loyaltyErrorMessage, requestSmsCode } from '@/lib/api/loyalty';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
@@ -18,7 +25,7 @@ import { useCountry } from '@/contexts/CountryContext';
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const { loginDemo } = useAuth();
+  const { loginDemo, loginWithTokens } = useAuth();
   const { country } = useCountry();
   const isRegister = params.get('mode') === 'register';
 
@@ -39,6 +46,15 @@ function LoginForm() {
 
   const dial = DIAL_OPTIONS.find((d) => d.code === dialCode) ?? DIAL_OPTIONS[0];
   const nationalDigits = formatNationalLoose(national);
+  const fullPhone = useMemo(
+    () => `${dialCode.replace(/\s/g, '')}${nationalDigits}`,
+    [dialCode, nationalDigits],
+  );
+  const canQuickLogin =
+    !isRegister &&
+    isPhoneSessionCacheEnabled() &&
+    isValidNationalDigits(nationalDigits) &&
+    hasCachedPhoneSession(fullPhone);
 
   function handleNationalChange(e: React.ChangeEvent<HTMLInputElement>) {
     setNational(formatNationalLoose(e.target.value));
@@ -61,7 +77,30 @@ function LoginForm() {
     setError('');
 
     try {
+      if (isPhoneSessionCacheEnabled()) {
+        const cached = getPhoneSession(fullPhone);
+        if (cached?.tokens.refresh_token) {
+          try {
+            await loginWithTokens(cached.tokens, country.id, fullPhone);
+            router.replace('/feed');
+            return;
+          } catch {
+            /* токены протухли — продолжаем через SMS */
+          }
+        }
+
+        if (shouldSkipSmsRequest(fullPhone)) {
+          router.push(
+            `/auth/verify?phone=${encodeURIComponent(fullPhone)}&name=${encodeURIComponent(name.trim())}&cached=1`,
+          );
+          return;
+        }
+      }
+
       await requestSmsCode(fullPhone);
+      if (isPhoneSessionCacheEnabled()) {
+        markSmsRequested(fullPhone);
+      }
       router.push(
         `/auth/verify?phone=${encodeURIComponent(fullPhone)}&name=${encodeURIComponent(name.trim())}`,
       );
@@ -99,7 +138,9 @@ function LoginForm() {
         <p className="text-sm text-muted mb-8">
           {isRegister
             ? 'Введите номер телефона — пришлём SMS с кодом'
-            : 'Введите номер телефона для входа'}
+            : canQuickLogin
+              ? 'Этот номер уже использовался — можно войти без SMS'
+              : 'Введите номер телефона для входа'}
         </p>
 
         <div className="space-y-4">
@@ -185,10 +226,14 @@ function LoginForm() {
             disabled={!isValidNationalDigits(nationalDigits) || cooldownSec > 0}
           >
             {loading
-              ? 'Отправляем SMS…'
+              ? canQuickLogin
+                ? 'Входим…'
+                : 'Отправляем SMS…'
               : cooldownSec > 0
                 ? `Повторить через ${cooldownSec}с`
-                : 'Получить код'}
+                : canQuickLogin
+                  ? 'Войти'
+                  : 'Получить код'}
           </Button>
 
           {isDemoAuthEnabled() && !isRegister && (
