@@ -8,6 +8,11 @@ const PAGE_TITLES: { prefix: string; title: string }[] = [
   { prefix: '/admin/settings', title: 'Настройки' },
   { prefix: '/admin/drinks', title: 'Напитки' },
   { prefix: '/admin/sales', title: 'Продажи' },
+  { prefix: '/admin/loyalty/settings', title: 'Программа лояльности' },
+  { prefix: '/admin/loyalty/bean-prices', title: 'Цены в Бинах' },
+  { prefix: '/admin/loyalty/alerts', title: 'Алерты антифрода' },
+  { prefix: '/admin/loyalty/users', title: 'Карточка пользователя' },
+  { prefix: '/admin/loyalty', title: 'Пользователи лояльности' },
 ];
 
 function pageTitle(pathname: string, userName: string | undefined): string {

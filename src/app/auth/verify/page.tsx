@@ -50,10 +50,10 @@ function VerifyForm() {
       if (!session?.tokens.refresh_token) return;
       setTryingCache(true);
       try {
-        await loginWithTokens(session.tokens, country.id, phone);
+        const cachedUser = await loginWithTokens(session.tokens, country.id, phone);
         setSuccess(true);
         setTimeout(() => {
-          router.replace(session.tokens.is_new ? '/profile' : '/feed');
+          router.replace(!cachedUser.profileCompleted ? '/onboarding' : '/feed');
         }, 800);
       } catch {
         /* нужен код из SMS */
@@ -109,10 +109,10 @@ function VerifyForm() {
       if (isPhoneSessionCacheEnabled()) {
         savePhoneSession(phone, tokens, fullCode);
       }
-      await loginWithTokens(tokens, country.id, phone);
+      const loggedUser = await loginWithTokens(tokens, country.id, phone);
       setSuccess(true);
       setTimeout(() => {
-        router.replace(tokens.is_new ? '/profile' : '/feed');
+        router.replace(!loggedUser.profileCompleted ? '/onboarding' : '/feed');
       }, 1200);
     } catch (err) {
       setError(loyaltyErrorMessage(err, 'Не удалось подтвердить код'));

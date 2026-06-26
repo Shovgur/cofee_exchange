@@ -144,12 +144,18 @@ export interface Coupon {
   paymentMethod?: 'card' | 'beans';
   /** Стоимость в Бинах (если покупка за Бины) */
   priceBeans?: number | null;
+  reservedAt?: string | null;
+  usedAt?: string | null;
 }
 
 // User
 export interface User {
   id: string;
+  /** Собранное полное имя для отображения (first + last или phone) */
   name: string;
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
   phone: string;
   loyaltyLevel: string;
   loyaltyPoints: number;

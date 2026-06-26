@@ -9,6 +9,10 @@ import {
   ShoppingCart,
   LogOut,
   ArrowLeft,
+  Users,
+  Award,
+  ShieldAlert,
+  Coffee,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +24,13 @@ const SECTION_NAV = [
   { href: '/admin/settings', icon: SlidersHorizontal, label: 'Настройки', exact: false },
   { href: '/admin/drinks', icon: GlassWater, label: 'Напитки', exact: false },
   { href: '/admin/sales', icon: ShoppingCart, label: 'Продажи', exact: false },
+] as const;
+
+const LOYALTY_NAV = [
+  { href: '/admin/loyalty', icon: Users, label: 'Пользователи', exact: true },
+  { href: '/admin/loyalty/settings', icon: Award, label: 'Программа лояльности', exact: false },
+  { href: '/admin/loyalty/bean-prices', icon: Coffee, label: 'Цены в Бинах', exact: false },
+  { href: '/admin/loyalty/alerts', icon: ShieldAlert, label: 'Алерты', exact: false },
 ] as const;
 
 function accountNavLabel(name: string | undefined): string {
@@ -85,6 +96,34 @@ export default function AdminSidebar() {
 
           {SECTION_NAV.map(({ href, icon: Icon, label, exact }) => {
             const active = isActive(pathname, href, exact);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                  active
+                    ? 'bg-orange/15 text-orange'
+                    : 'text-muted hover:bg-surface-el hover:text-foreground',
+                )}
+              >
+                <Icon size={18} strokeWidth={active ? 2.5 : 1.8} className="shrink-0" />
+                {label}
+                {active && (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-orange" />
+                )}
+              </Link>
+            );
+          })}
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-muted/60">
+              Лояльность
+            </p>
+          </div>
+
+          {LOYALTY_NAV.map(({ href, icon: Icon, label, exact }) => {
+            const active = exact ? pathname === href : pathname.startsWith(href);
             return (
               <Link
                 key={href}

@@ -4,16 +4,16 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
 import AuthGate from '@/components/auth/AuthGate';
-import Modal from '@/components/ui/Modal';
+import CouponDetailModal from '@/components/coupons/CouponDetailModal';
 import Badge from '@/components/ui/Badge';
-import DecorativeBarcode from '@/components/ui/DecorativeBarcode';
-import { cn, couponStatusLabel, couponStatusColor, formatDateTime, formatFullDate, daysUntil } from '@/lib/utils';
+import { cn, couponStatusLabel, couponStatusColor, formatDateTime, daysUntil } from '@/lib/utils';
 import type { Coupon, CouponStatus } from '@/types';
 import { Ticket, Calendar, Clock, Rocket } from 'lucide-react';
 
 const FILTERS: { value: 'all' | CouponStatus; label: string }[] = [
   { value: 'all', label: 'Все' },
   { value: 'active', label: 'Активные' },
+  { value: 'reserved', label: 'Зарезервированные' },
   { value: 'used', label: 'Использованные' },
   { value: 'expired', label: 'Просроченные' },
 ];
@@ -24,11 +24,15 @@ function DrinkEmoji({ category }: { category: string }) {
   return <>🍵</>;
 }
 
+function canOpenDetail(status: CouponStatus): boolean {
+  return status === 'active' || status === 'reserved' || status === 'used';
+}
+
 export default function CouponsPage() {
   const { coupons, refreshCoupons } = useAuth();
   const { country } = useCountry();
   const [filter, setFilter] = useState<'all' | CouponStatus>('all');
-  const [selected, setSelected] = useState<Coupon | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     void refreshCoupons();
@@ -86,11 +90,11 @@ export default function CouponsPage() {
           {visible.map((coupon) => (
             <button
               key={coupon.id}
-              onClick={() => coupon.status === 'active' && setSelected(coupon)}
+              onClick={() => canOpenDetail(coupon.status) && setSelectedId(coupon.id)}
               className={cn(
                 'w-full text-left bg-surface rounded-2xl p-4 transition-all',
-                coupon.status === 'active' && 'active:scale-[0.98]',
-                coupon.status !== 'active' && 'opacity-60',
+                canOpenDetail(coupon.status) && 'active:scale-[0.98] hover:bg-surface-el',
+                !canOpenDetail(coupon.status) && 'opacity-60 cursor-default',
               )}
             >
               <div className="flex items-start gap-3">
@@ -133,11 +137,11 @@ export default function CouponsPage() {
                       </span>
                     </div>
                   )}
-                  {!coupon.isPreorder && coupon.status === 'active' && (
+                  {!coupon.isPreorder && (coupon.status === 'active' || coupon.status === 'reserved') && (
                     <div className="flex items-center gap-1 mt-1.5 text-xs text-muted">
                       <Clock size={11} />
                       <span>
-                        Действует ещё{' '}
+                        {coupon.status === 'reserved' ? 'Зарезервирован · ' : 'Действует ещё '}
                         <span className="text-orange font-medium">
                           {daysUntil(coupon.expiresAt)} дн.
                         </span>
@@ -151,50 +155,11 @@ export default function CouponsPage() {
         </div>
       </div>
 
-      {/* Coupon detail modal */}
-      <Modal
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        title="Ваш купон"
-      >
-        {selected && (
-          <div className="space-y-5 pb-1">
-            {selected.purchaseSummary && (
-              <div className="rounded-2xl border border-border bg-surface-el p-4">
-                <p className="text-xs font-semibold text-muted mb-2">Состав заказа</p>
-                <p className="text-sm leading-relaxed whitespace-pre-line">{selected.purchaseSummary}</p>
-              </div>
-            )}
-
-            <DecorativeBarcode value={selected.qrData} />
-
-            <p className="text-center text-sm text-muted">
-              Покажите штрихкод кассиру для получения напитка
-            </p>
-
-            <div className="bg-surface-el rounded-2xl p-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted">Куплено</span>
-                <span>{formatDateTime(selected.purchasedAt)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Действует до</span>
-                <span>{formatFullDate(selected.expiresAt)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Статус</span>
-                <Badge className={couponStatusColor(selected.status)}>
-                  {couponStatusLabel(selected.status)}
-                </Badge>
-              </div>
-            </div>
-
-            <p className="text-xs text-muted text-center">
-              Купон действителен во всех кофейнях {country.name}
-            </p>
-          </div>
-        )}
-      </Modal>
+      <CouponDetailModal
+        couponId={selectedId}
+        country={country}
+        onClose={() => setSelectedId(null)}
+      />
     </AuthGate>
   );
 }

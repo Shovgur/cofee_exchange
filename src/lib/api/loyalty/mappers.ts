@@ -97,6 +97,9 @@ export function mapProfileToUser(
   return {
     id: profile.id,
     name,
+    firstName: profile.first_name ?? undefined,
+    lastName: profile.last_name ?? undefined,
+    middleName: profile.middle_name ?? undefined,
     phone: profile.phone,
     loyaltyLevel: 'Member',
     loyaltyPoints: balance,
@@ -109,7 +112,7 @@ export function mapProfileToUser(
 }
 
 function mapCouponStatus(status: ApiCoupon['status']): CouponStatus {
-  if (status === 'reserved') return 'active';
+  if (status === 'reserved') return 'reserved';
   if (status === 'expired') return 'expired';
   if (status === 'used') return 'used';
   return 'active';
@@ -163,6 +166,8 @@ export function mapApiCouponToUi(coupon: ApiCoupon, country?: Country): Coupon {
     purchaseSummary: buildPurchaseSummary(coupon),
     paymentMethod: coupon.purchase_kind === 'bean' ? 'beans' : 'card',
     priceBeans: coupon.price_beans ?? drink?.price_beans ?? undefined,
+    reservedAt: coupon.reserved_at,
+    usedAt: coupon.used_at,
   };
 }
 
