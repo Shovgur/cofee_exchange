@@ -1,4 +1,4 @@
-import { buildApiPath } from '@/lib/api/exchange/client';
+import { buildApiPath, parseExchangeJson } from '@/lib/api/exchange/client';
 import type {
   ApiAdminRecalcResponse,
   ApiAdminSettings,
@@ -6,61 +6,31 @@ import type {
   ApiAdminSettingsUpdate,
 } from '@/lib/api/exchange/types';
 
+const fetchOpts: RequestInit = { cache: 'no-store', headers: { Accept: 'application/json' } };
+
 export async function fetchAdminSettings(): Promise<ApiAdminSettings> {
-  const url = buildApiPath('v1/admin/settings');
-  const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
-  const raw = await res.text();
-  if (!res.ok) throw new Error(`Ошибка загрузки настроек: ${res.status}`);
-  try {
-    return JSON.parse(raw) as ApiAdminSettings;
-  } catch {
-    throw new Error('Сервер вернул не JSON');
-  }
+  const res = await fetch(buildApiPath('v1/admin/settings'), fetchOpts);
+  return parseExchangeJson<ApiAdminSettings>(res);
 }
 
 export async function putAdminSettings(payload: ApiAdminSettingsUpdate): Promise<ApiAdminSettings> {
-  const url = buildApiPath('v1/admin/settings');
-  const res = await fetch(url, {
+  const res = await fetch(buildApiPath('v1/admin/settings'), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(payload),
   });
-  const raw = await res.text();
-  if (!res.ok) throw new Error(`Ошибка сохранения настроек: ${res.status}`);
-  try {
-    return JSON.parse(raw) as ApiAdminSettings;
-  } catch {
-    throw new Error('Сервер вернул не JSON');
-  }
+  return parseExchangeJson<ApiAdminSettings>(res);
 }
 
 export async function fetchAdminSettingsHistory(): Promise<ApiAdminSettingsHistoryItem[]> {
-  const url = buildApiPath('v1/admin/settings/history');
-  const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
-  const raw = await res.text();
-  if (!res.ok) throw new Error(`Ошибка загрузки истории: ${res.status}`);
-  try {
-    return JSON.parse(raw) as ApiAdminSettingsHistoryItem[];
-  } catch {
-    throw new Error('Сервер вернул не JSON');
-  }
+  const res = await fetch(buildApiPath('v1/admin/settings/history'), fetchOpts);
+  return parseExchangeJson<ApiAdminSettingsHistoryItem[]>(res);
 }
 
 export async function postAdminRecalc(): Promise<ApiAdminRecalcResponse> {
-  const url = buildApiPath('v1/admin/recalc');
-  const res = await fetch(url, {
+  const res = await fetch(buildApiPath('v1/admin/recalc'), {
     method: 'POST',
-    cache: 'no-store',
-    headers: { Accept: 'application/json' },
+    ...fetchOpts,
   });
-  const raw = await res.text();
-  if (!res.ok) {
-    const hint = raw.trim() ? ` — ${raw.slice(0, 300)}` : '';
-    throw new Error(`Ошибка пересчёта: ${res.status}${hint}`);
-  }
-  try {
-    return JSON.parse(raw) as ApiAdminRecalcResponse;
-  } catch {
-    throw new Error('Сервер вернул не JSON');
-  }
+  return parseExchangeJson<ApiAdminRecalcResponse>(res);
 }

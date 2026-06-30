@@ -7,7 +7,9 @@ import { NextRequest, NextResponse } from 'next/server';
  * Когда у API будет свой домен с HTTPS — удалить этот route и логику прокси в src/lib/api/index.ts
  * (искать комментарий «mixed-content» / http-backend-proxy).
  */
-const BACKEND = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+const BACKEND = (
+  process.env.NEXT_PUBLIC_API_URL ?? 'https://api-pricing.coffeeexchange.ru'
+).replace(/\/$/, '');
 
 function isAllowedProxyPath(path: string): boolean {
   if (!path.startsWith('v1/')) return false;

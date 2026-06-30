@@ -1,2 +1,2 @@
 export * from './demo-auth';
-export * from './phone-session-cache';
+export * from './sms-cooldown';

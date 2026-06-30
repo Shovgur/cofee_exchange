@@ -16,10 +16,6 @@ import {
   saveDemoSession,
 } from '@/lib/auth/demo-auth';
 import {
-  isPhoneSessionCacheEnabled,
-  savePhoneSession,
-} from '@/lib/auth/phone-session-cache';
-import {
   clearStoredTokens,
   fetchCoupons,
   fetchCurrentUser,
@@ -43,7 +39,7 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  loginWithTokens: (tokens: ApiTokenPair, countryId: string, phone?: string) => Promise<User>;
+  loginWithTokens: (tokens: ApiTokenPair, countryId: string) => Promise<User>;
   loginDemo: (countryId: string) => User;
   logout: () => Promise<void>;
   refreshUserData: () => Promise<void>;
@@ -126,14 +122,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadFromApi]);
 
   const loginWithTokens = useCallback(
-    async (tokens: ApiTokenPair, countryId: string, phone?: string) => {
+    async (tokens: ApiTokenPair, countryId: string) => {
       clearDemoSession();
       storeTokens(tokens);
       setState((prev) => ({ ...prev, isNewUser: tokens.is_new, isDemo: false }));
       const user = await loadFromApi(countryId);
-      if (isPhoneSessionCacheEnabled() && phone) {
-        savePhoneSession(phone, tokens);
-      }
       return user;
     },
     [loadFromApi],

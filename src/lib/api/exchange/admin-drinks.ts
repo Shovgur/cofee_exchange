@@ -1,4 +1,4 @@
-import { buildApiPath } from '@/lib/api/exchange/client';
+import { buildApiPath, parseExchangeJson } from '@/lib/api/exchange/client';
 
 // ─── Types (из OpenAPI DrinkRead, DrinkCreate, DrinkUpdate, …) ────────────────
 
@@ -61,13 +61,6 @@ export interface AdminManualSetRequest {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function parseJson<T>(res: Response): Promise<T> {
-  const raw = await res.text();
-  if (!res.ok) throw new Error(raw || `Ошибка API: ${res.status}`);
-  try { return JSON.parse(raw) as T; }
-  catch { throw new Error('Сервер вернул не JSON'); }
-}
-
 function json(body: unknown): RequestInit {
   return {
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -75,58 +68,60 @@ function json(body: unknown): RequestInit {
   };
 }
 
+const fetchOpts: RequestInit = { cache: 'no-store', headers: { Accept: 'application/json' } };
+
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 export async function fetchAdminDrinksList(limit = 100, offset = 0): Promise<AdminDrinkRead[]> {
   const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   const url = `${buildApiPath('v1/admin/drinks')}?${q}`;
-  const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
-  return parseJson<AdminDrinkRead[]>(res);
+  const res = await fetch(url, fetchOpts);
+  return parseExchangeJson<AdminDrinkRead[]>(res);
 }
 
 export async function fetchAdminDrink(drinkId: string): Promise<AdminDrinkRead> {
   const url = buildApiPath(`v1/admin/drinks/${encodeURIComponent(drinkId)}`);
-  const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
-  return parseJson<AdminDrinkRead>(res);
+  const res = await fetch(url, fetchOpts);
+  return parseExchangeJson<AdminDrinkRead>(res);
 }
 
 export async function createAdminDrink(body: AdminDrinkCreate): Promise<AdminDrinkRead> {
   const res = await fetch(buildApiPath('v1/admin/drinks'), { method: 'POST', ...json(body) });
-  return parseJson<AdminDrinkRead>(res);
+  return parseExchangeJson<AdminDrinkRead>(res);
 }
 
 export async function putAdminDrinkProfile(drinkId: string, body: AdminDrinkUpdate): Promise<AdminDrinkRead> {
   const url = buildApiPath(`v1/admin/drinks/${encodeURIComponent(drinkId)}/profile`);
   const res = await fetch(url, { method: 'PUT', ...json(body) });
-  return parseJson<AdminDrinkRead>(res);
+  return parseExchangeJson<AdminDrinkRead>(res);
 }
 
 export async function putAdminDrinkBasePrice(drinkId: string, body: AdminBasePriceUpdate): Promise<AdminDrinkRead> {
   const url = buildApiPath(`v1/admin/drinks/${encodeURIComponent(drinkId)}/base-price`);
   const res = await fetch(url, { method: 'PUT', ...json(body) });
-  return parseJson<AdminDrinkRead>(res);
+  return parseExchangeJson<AdminDrinkRead>(res);
 }
 
 export async function postAdminDrinkFix(drinkId: string, body: AdminFixRequest): Promise<AdminDrinkRead> {
   const url = buildApiPath(`v1/admin/drinks/${encodeURIComponent(drinkId)}/fix`);
   const res = await fetch(url, { method: 'POST', ...json(body) });
-  return parseJson<AdminDrinkRead>(res);
+  return parseExchangeJson<AdminDrinkRead>(res);
 }
 
 export async function postAdminDrinkUnfix(drinkId: string): Promise<AdminDrinkRead> {
   const url = buildApiPath(`v1/admin/drinks/${encodeURIComponent(drinkId)}/unfix`);
   const res = await fetch(url, { method: 'POST', ...json({}) });
-  return parseJson<AdminDrinkRead>(res);
+  return parseExchangeJson<AdminDrinkRead>(res);
 }
 
 export async function postAdminDrinkManualSet(drinkId: string, body: AdminManualSetRequest): Promise<AdminDrinkRead> {
   const url = buildApiPath(`v1/admin/drinks/${encodeURIComponent(drinkId)}/manual-set`);
   const res = await fetch(url, { method: 'POST', ...json(body) });
-  return parseJson<AdminDrinkRead>(res);
+  return parseExchangeJson<AdminDrinkRead>(res);
 }
 
 export async function postAdminDrinkToggleActive(drinkId: string): Promise<AdminDrinkRead> {
   const url = buildApiPath(`v1/admin/drinks/${encodeURIComponent(drinkId)}/toggle-active`);
   const res = await fetch(url, { method: 'POST', ...json({}) });
-  return parseJson<AdminDrinkRead>(res);
+  return parseExchangeJson<AdminDrinkRead>(res);
 }

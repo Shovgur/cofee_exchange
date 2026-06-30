@@ -24,10 +24,6 @@ import {
   quoteMoneyPurchase,
 } from "@/lib/api/loyalty";
 import {
-  buildDrinkFromGroup,
-  getPriceEntriesForDrinkRoute,
-} from "@/lib/drinks/build-from-prices";
-import {
   mapApiModifiersToGroups,
   type DrinkAddonGroup,
 } from "@/lib/drinks/addons";
@@ -63,14 +59,12 @@ export default function DrinkPage({ params }: PageProps) {
   const { country } = useCountry();
   const { user, isDemo, purchaseDemoCoupon, refreshCoupons, refreshUserData } = useAuth();
 
-  const { prices, menuItems, loading, error, flashMap, flashGen } = usePrices();
+  const { drinks, menuItems, loading, error, flashMap, flashGen } = usePrices();
 
-  const drink = useMemo(() => {
-    if (prices.length === 0) return null;
-    const entries = getPriceEntriesForDrinkRoute(params.drinkId, prices);
-    if (entries.length === 0) return null;
-    return buildDrinkFromGroup(entries, country.id);
-  }, [prices, params.drinkId, country.id]);
+  const drink = useMemo(
+    () => drinks.find((d) => d.id === params.drinkId) ?? null,
+    [drinks, params.drinkId],
+  );
 
   const [selectedVolume, setSelectedVolume] = useState<VolumePrice | null>(
     null,
@@ -101,11 +95,9 @@ export default function DrinkPage({ params }: PageProps) {
 
   const activeVol = useMemo(() => {
     if (!drink) return null;
-    if (
-      selectedVolume &&
-      drink.volumes.find((v) => v.value === selectedVolume.value)
-    ) {
-      return selectedVolume;
+    if (selectedVolume) {
+      const match = drink.volumes.find((v) => v.value === selectedVolume.value);
+      if (match) return match;
     }
     return (
       drink.volumes[Math.floor(drink.volumes.length / 2)] ?? drink.volumes[0]
@@ -176,7 +168,7 @@ export default function DrinkPage({ params }: PageProps) {
         ? TrendingDown
         : Minus;
 
-  const drinkBeans = activeVol.priceBeans ?? 0;
+  const drinkBeans = activeVol.priceBeans ?? null;
 
   async function confirmPurchase(payload: {
     totalRub: number;
@@ -347,10 +339,12 @@ export default function DrinkPage({ params }: PageProps) {
                       {formatPrice(activeVol.price, country.currencySymbol)}
                     </span>
                   </div>
-                  <span className="inline-flex items-center gap-0.5 text-sm font-semibold tabular-nums text-orange">
-                    {drinkBeans}
-                    <CoffeeBeanIcon size={14} className="shrink-0" />
-                  </span>
+                  {drinkBeans != null && (
+                    <span className="inline-flex items-center gap-0.5 text-sm font-semibold tabular-nums text-orange">
+                      {drinkBeans}
+                      <CoffeeBeanIcon size={14} className="shrink-0" />
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -459,7 +453,7 @@ export default function DrinkPage({ params }: PageProps) {
         drinkName={drink.name}
         volumeLabel={activeVol.label}
         basePriceRub={activeVol.price}
-        baseBeans={drinkBeans}
+        baseBeans={drinkBeans ?? 0}
         currencySymbol={country.currencySymbol}
         drinkNutrition={{
           calories: drink.calories,

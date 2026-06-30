@@ -34,6 +34,8 @@ async function proxy(request: NextRequest, slug: string[]): Promise<NextResponse
   const outHeaders = new Headers();
   const ct = res.headers.get('Content-Type');
   if (ct) outHeaders.set('Content-Type', ct);
+  const retryAfter = res.headers.get('Retry-After');
+  if (retryAfter) outHeaders.set('Retry-After', retryAfter);
   return new NextResponse(body, { status: res.status, headers: outHeaders });
 }
 
