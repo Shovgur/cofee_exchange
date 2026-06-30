@@ -12,10 +12,25 @@ interface DecorativeBarcodeProps {
   size?: 'compact' | 'default';
 }
 
+function isNumericCode(value: string): boolean {
+  const stripped = value.replace(/\s/g, '');
+  return stripped.length > 0 && /^\d+$/.test(stripped);
+}
+
 function formatDisplayCode(value: string, size: 'compact' | 'default'): string {
-  const raw = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  const trimmed = value.trim();
+  if (!trimmed) return '00000000';
+
+  if (isNumericCode(trimmed)) {
+    const digits = trimmed.replace(/\D/g, '');
+    const maxLen = size === 'compact' ? 12 : 16;
+    const sliced = digits.slice(0, maxLen);
+    return sliced.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+  }
+
+  const raw = trimmed.replace(/[^A-Z0-9]/gi, '').toUpperCase();
   const sliced = size === 'compact' ? raw.slice(-12) : raw.slice(0, 16);
-  return sliced.replace(/(.{4})/g, '$1 ').trim() || '0000 0000 0000';
+  return sliced.replace(/(.{4})/g, '$1 ').trim() || '0000 0000';
 }
 
 export default function DecorativeBarcode({
@@ -25,8 +40,10 @@ export default function DecorativeBarcode({
   codeClassName,
   size = 'default',
 }: DecorativeBarcodeProps) {
+  const normalized = value.replace(/\s/g, '');
+
   const bars = useMemo(() => {
-    const seed = value.split('').reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), 0);
+    const seed = normalized.split('').reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), 0);
     const count = barCount ?? (size === 'compact' ? 52 : 56);
     return Array.from({ length: count }, (_, i) => ({
       width: 1 + Math.round(Math.abs(Math.sin(seed + i * 2.3)) * 100 % 3),
@@ -34,9 +51,9 @@ export default function DecorativeBarcode({
         (size === 'compact' ? 28 : 32) +
         Math.round(Math.abs(Math.cos(seed + i * 1.1)) * 100 % (size === 'compact' ? 22 : 24)),
     }));
-  }, [value, barCount, size]);
+  }, [normalized, barCount, size]);
 
-  const displayCode = formatDisplayCode(value, size);
+  const displayCode = formatDisplayCode(normalized, size);
 
   return (
     <div
@@ -60,7 +77,7 @@ export default function DecorativeBarcode({
           'font-mono tabular-nums text-neutral-700',
           size === 'compact'
             ? 'text-xs tracking-[0.18em] text-neutral-600'
-            : 'text-xs tracking-widest',
+            : 'text-sm tracking-[0.2em]',
           codeClassName,
         )}
       >

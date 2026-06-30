@@ -133,7 +133,10 @@ export interface Coupon {
   purchasedAt: string;
   expiresAt: string;
   status: CouponStatus;
-  qrData: string;
+  /** Числовой номер купона (штрихкод) */
+  number: string | null;
+  /** Значение для отображения штрихкода: number или fallback qr_token */
+  barcodeCode: string;
   countryId: string;
   isPreorder?: boolean;
   saleStartsAt?: string;

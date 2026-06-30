@@ -107,6 +107,8 @@ export interface ApiCoupon {
   id: string;
   status: ApiCouponStatus;
   qr_token: string;
+  /** Числовой номер купона для штрихкода на кассе */
+  number: string | null;
   purchase_kind: ApiPurchaseKind;
   price_beans: number | null;
   price_money: string | null;

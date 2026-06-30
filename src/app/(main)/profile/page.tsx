@@ -264,27 +264,18 @@ export default function ProfilePage() {
     orderStatus: true,
   });
 
-  // Real barcode from API
+  // Личный штрихкод из GET /users/me/barcode (числовой code)
   const [barcodeValue, setBarcodeValue] = useState<string | null>(null);
   useEffect(() => {
     if (!user) return;
     fetchUserBarcode()
       .then((b) => setBarcodeValue(b.code))
       .catch(() => {
-        // fallback to local code
-        const d = user.phone.replace(/\D/g, '');
-        setBarcodeValue(user.userCode ?? (d.slice(-8) || user.id.replace(/\D/g, '').slice(-8)).padStart(8, '0'));
+        setBarcodeValue(user.userCode ?? null);
       });
   }, [user]);
 
-  const localFallbackBarcode = useMemo(() => {
-    if (!user) return '00000000';
-    if (user.userCode) return user.userCode;
-    const d = user.phone.replace(/\D/g, '');
-    return (d.slice(-8) || user.id.replace(/\D/g, '').slice(-8)).padStart(8, '0');
-  }, [user]);
-
-  const displayBarcode = barcodeValue ?? localFallbackBarcode;
+  const displayBarcode = barcodeValue ?? user?.userCode ?? '00000000';
 
   const userCoupons = coupons.filter((c) => c.countryId === country.id);
 

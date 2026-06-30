@@ -86,14 +86,19 @@ export default function CouponDetailModal({
 
           {showQr ? (
             <>
-              <DecorativeBarcode value={coupon.qrData} />
+              <DecorativeBarcode value={coupon.barcodeCode} />
+              {coupon.number && (
+                <p className="text-center text-xs font-mono tabular-nums text-muted tracking-widest">
+                  № {coupon.number}
+                </p>
+              )}
               <p className="text-center text-sm text-muted">
                 Покажите штрихкод кассиру для получения напитка
               </p>
             </>
           ) : (
             <p className="text-center text-sm text-muted py-2">
-              QR-код недоступен для купонов со статусом «{couponStatusLabel(coupon.status)}»
+              Штрихкод недоступен для купонов со статусом «{couponStatusLabel(coupon.status)}»
             </p>
           )}
 
