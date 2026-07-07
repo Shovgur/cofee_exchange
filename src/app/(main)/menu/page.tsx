@@ -369,7 +369,7 @@ export default function MenuPage() {
           )}
         </div>
 
-        <div className="shrink-0 space-y-6 px-4 pt-4 lg:px-8 lg:pb-8">
+        <div className="shrink-0 space-y-6 px-4 pt-4 pb-6 lg:px-8 lg:pb-8">
           {searchOpen ? (
             <>
               {!searchQuery.trim() ? (

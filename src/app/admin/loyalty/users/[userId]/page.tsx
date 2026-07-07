@@ -59,12 +59,14 @@ function BeanOpModal({
   onClose,
   onConfirm,
   mode,
+  setMode,
   loading,
 }: {
   open: boolean;
   onClose: () => void;
   onConfirm: (beans: number, comment: string) => void;
   mode: 'accrue' | 'spend';
+  setMode: (m: 'accrue' | 'spend') => void;
   loading: boolean;
 }) {
   const [beans, setBeans] = useState('');
@@ -81,12 +83,32 @@ function BeanOpModal({
   }, [open]);
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={mode === 'accrue' ? 'Начислить Бины' : 'Списать Бины'}
-    >
+    <Modal open={open} onClose={onClose} title="Операции с Бинами">
       <div className="space-y-4">
+        {/* Переключатель начислить/списать */}
+        <div className="flex rounded-xl bg-surface-ov p-1 gap-1">
+          <button
+            type="button"
+            onClick={() => setMode('accrue')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium transition-colors',
+              mode === 'accrue' ? 'bg-surface shadow-sm text-green-600' : 'text-muted hover:text-foreground',
+            )}
+          >
+            <PlusCircle size={14} /> Начислить
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('spend')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium transition-colors',
+              mode === 'spend' ? 'bg-surface shadow-sm text-danger' : 'text-muted hover:text-foreground',
+            )}
+          >
+            <MinusCircle size={14} /> Списать
+          </button>
+        </div>
+
         <div>
           <label className="block text-xs font-medium text-muted mb-1.5">
             Количество Бинов
@@ -427,55 +449,50 @@ export default function AdminUserPage({ params }: { params: { userId: string } }
           </Button>
         </div>
 
-        {/* Stats */}
+        {/* Stats — ячейки кликабельные */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-border bg-surface p-4 text-center">
+          {/* Баланс → открывает начислить/списать */}
+          <button
+            type="button"
+            onClick={() => setBeanOpMode('accrue')}
+            className="group rounded-xl border border-border bg-surface p-4 text-center hover:border-orange/40 hover:bg-orange/5 transition-colors relative"
+          >
             <div className="flex items-center justify-center gap-1.5 text-2xl font-bold text-orange tabular-nums">
               {new Intl.NumberFormat('ru-RU').format(user.balance)}
               <CoffeeBeanIcon size={18} className="shrink-0" />
             </div>
             <p className="text-xs text-muted mt-1">Баланс Бинов</p>
-          </div>
-          <div className="rounded-xl border border-border bg-surface p-4 text-center">
+            <div className="mt-2 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-green-500/15 px-2 py-0.5 text-[10px] font-medium text-green-600">
+                <PlusCircle size={9} /> Начислить
+              </span>
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-medium text-danger">
+                <MinusCircle size={9} /> Списать
+              </span>
+            </div>
+          </button>
+
+          {/* Купоны → открывает отмену */}
+          <button
+            type="button"
+            onClick={() => user.active_coupons > 0 && setShowCancelCoupon(true)}
+            disabled={user.active_coupons === 0}
+            className="group rounded-xl border border-border bg-surface p-4 text-center hover:border-danger/40 hover:bg-danger/5 transition-colors disabled:opacity-60 disabled:cursor-default disabled:hover:border-border disabled:hover:bg-surface"
+          >
             <div className="flex items-center justify-center gap-1.5 text-2xl font-bold text-foreground tabular-nums">
               <Ticket size={20} className="text-orange shrink-0" />
               {user.active_coupons}
             </div>
             <p className="text-xs text-muted mt-1">Активных купонов</p>
-          </div>
+            {user.active_coupons > 0 && (
+              <div className="mt-2 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-medium text-danger">
+                  <XCircle size={9} /> Отменить купон
+                </span>
+              </div>
+            )}
+          </button>
         </div>
-
-        {/* Bean actions */}
-        <div className="flex gap-3">
-          <Button
-            variant="secondary"
-            className="flex-1 flex items-center justify-center gap-2"
-            onClick={() => setBeanOpMode('accrue')}
-          >
-            <PlusCircle size={16} className="text-green-500" />
-            Начислить Бины
-          </Button>
-          <Button
-            variant="secondary"
-            className="flex-1 flex items-center justify-center gap-2"
-            onClick={() => setBeanOpMode('spend')}
-          >
-            <MinusCircle size={16} className="text-danger" />
-            Списать Бины
-          </Button>
-        </div>
-
-        {/* Coupon cancel */}
-        {user.active_coupons > 0 && (
-          <Button
-            variant="secondary"
-            className="w-full flex items-center justify-center gap-2 border-danger/40 text-danger hover:bg-danger/5"
-            onClick={() => setShowCancelCoupon(true)}
-          >
-            <XCircle size={16} />
-            Отменить купон пользователя
-          </Button>
-        )}
 
         {/* Profile details */}
         <div>
@@ -540,6 +557,7 @@ export default function AdminUserPage({ params }: { params: { userId: string } }
         onClose={() => setBeanOpMode(null)}
         onConfirm={handleBeanOp}
         mode={beanOpMode ?? 'accrue'}
+        setMode={(m) => setBeanOpMode(m)}
         loading={beanLoading}
       />
 

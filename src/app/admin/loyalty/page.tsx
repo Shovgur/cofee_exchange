@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, User, Phone, Hash, Globe, ShieldBan, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Search, User, Phone, Hash, Globe, ShieldBan, CheckCircle2, ChevronRight, Users } from 'lucide-react';
 import { adminSearchUsers, type AdminUserOut } from '@/lib/api/loyalty/admin';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
@@ -63,22 +63,17 @@ export default function AdminLoyaltyPage() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [users, setUsers] = useState<AdminUserOut[]>([]);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
 
   const doSearch = useCallback(async (q: string) => {
-    if (!q.trim()) {
-      setUsers([]);
-      setTotal(0);
-      setSearched(false);
-      return;
-    }
+    if (!q.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await adminSearchUsers({ query: q.trim(), limit: 30 });
+      const res = await adminSearchUsers({ query: q.trim(), limit: 50 });
       setUsers(res.items);
       setTotal(res.total);
       setSearched(true);
@@ -93,16 +88,25 @@ export default function AdminLoyaltyPage() {
     setQuery(v);
     if (!v.trim()) {
       setUsers([]);
-      setTotal(0);
+      setTotal(null);
       setSearched(false);
     }
   };
 
   return (
     <div className="p-8 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1">Пользователи</h1>
-        <p className="text-sm text-muted">Поиск по телефону, коду, имени или email</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold mb-1">Пользователи</h1>
+          <p className="text-sm text-muted">Поиск по телефону, коду, имени или email</p>
+        </div>
+        {total !== null && (
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 shrink-0">
+            <Users size={16} className="text-orange" />
+            <span className="text-sm font-bold tabular-nums">{total}</span>
+            <span className="text-xs text-muted">найдено</span>
+          </div>
+        )}
       </div>
 
       {/* Search */}

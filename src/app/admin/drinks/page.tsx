@@ -1,11 +1,9 @@
 'use client';
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   RefreshCw,
-  Plus,
   AlertCircle,
   ChevronRight,
   Lock,
@@ -15,7 +13,6 @@ import {
 } from 'lucide-react';
 import { fetchAdminDrinksList, postAdminDrinkToggleActive, type AdminDrinkRead } from '@/lib/api/exchange/admin-drinks';
 import { cn } from '@/lib/utils';
-import Button from '@/components/ui/Button';
 function Badge({ children, color }: { children: React.ReactNode; color: string }) {
   return (
     <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium', color)}>
@@ -108,12 +105,6 @@ export default function AdminDrinksListPage() {
           >
             <RefreshCw size={18} className={cn(loading && 'animate-spin')} />
           </button>
-          <Link href="/admin/drinks/new">
-            <Button>
-              <Plus size={15} />
-              Добавить
-            </Button>
-          </Link>
         </div>
       </div>
 

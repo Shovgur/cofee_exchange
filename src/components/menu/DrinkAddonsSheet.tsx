@@ -81,11 +81,6 @@ function optionById(group: DrinkAddonGroup, id: string) {
   return group.options.find((o) => o.id === id);
 }
 
-function drinkMood(calories: number): { label: string; emoji: string } {
-  if (calories >= 250) return { label: "Сытно", emoji: "😌" };
-  if (calories >= 120) return { label: "Бодрость", emoji: "⚡" };
-  return { label: "Лёгкость", emoji: "🍃" };
-}
 
 export interface DrinkNutritionBase {
   calories: number;
@@ -199,11 +194,6 @@ export default function DrinkAddonsSheet({
 
   const totalRub = basePriceRub + addonRub;
   const totalBeans = baseBeans + addonBeans;
-
-  const mood = useMemo(
-    () => drinkMood(totalNutrition.calories),
-    [totalNutrition.calories],
-  );
 
   function toggleMultiOption(optionId: string) {
     setMultiSel((prev) => {
@@ -384,30 +374,15 @@ export default function DrinkAddonsSheet({
                         label: "Углев.",
                         value: `${totalNutrition.carbs.toFixed(1)}г`,
                       },
-                      {
-                        label: "Настроение",
-                        value: mood.label,
-                        emoji: mood.emoji,
-                      },
-                    ].map(({ label, value, emoji }) => (
+                    ].map(({ label, value }) => (
                       <div
                         key={label}
                         className="rounded-xl bg-bg/80 py-2 text-center"
                       >
                         <div className="text-[10px] text-muted leading-tight">
-                          {label === "Настроение" ? "Настро." : label}
+                          {label}
                         </div>
-                        {emoji ? (
-                          <div className="mt-0.5 text-base leading-none">
-                            {emoji}
-                          </div>
-                        ) : null}
-                        <div
-                          className={cn(
-                            "font-semibold tabular-nums leading-tight",
-                            emoji ? "text-[10px]" : "text-xs",
-                          )}
-                        >
+                        <div className="text-xs font-semibold tabular-nums leading-tight">
                           {value}
                         </div>
                       </div>

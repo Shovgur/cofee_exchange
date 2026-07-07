@@ -539,9 +539,16 @@ export default function ProfilePage() {
                       <div className="text-xs text-muted">{formatDateTime(coupon.purchasedAt)}</div>
                     </div>
                   </div>
-                  <span className="text-sm font-semibold shrink-0">
-                    {Math.round(coupon.purchasePrice)} {coupon.currencySymbol}
-                  </span>
+                  {coupon.paymentMethod === 'beans' && coupon.priceBeans != null ? (
+                    <span className="text-sm font-semibold shrink-0 flex items-center gap-0.5 text-orange">
+                      {coupon.priceBeans}
+                      <CoffeeBeanIcon size={12} />
+                    </span>
+                  ) : (
+                    <span className="text-sm font-semibold shrink-0">
+                      {Math.round(coupon.purchasePrice)} {coupon.currencySymbol}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
