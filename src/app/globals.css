@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Высота таб-бара без safe-area (icon + label + py-3) */
+    --app-bottom-nav-height: 3.75rem;
+  }
+
   html {
     height: 100%;
     min-height: 100%;
@@ -70,9 +75,17 @@
     padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
   }
 
-  /* нижний отступ под таб-бар (~3.75rem) + home indicator */
+  /* Отступ под таб-бар — для fixed-элементов внутри страниц (кнопки, sheet и т.д.) */
   .pb-nav-safe {
-    padding-bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-bottom-nav {
+    min-height: var(--app-bottom-nav-height);
+  }
+
+  .bottom-above-nav {
+    bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
   }
 
   /* Высота home indicator: constant() для старых Safari, env() для новых */

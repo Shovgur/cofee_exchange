@@ -210,7 +210,7 @@ export default function MapView({ shops, onShopClick, center }: Props) {
         style={{ background: '#0d0d12' }}
       />
 
-      <div className="pointer-events-none absolute inset-0 z-[10060] flex items-end justify-end p-4 pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] lg:p-6 lg:pb-6">
+      <div className="pointer-events-none absolute inset-0 z-[10060] flex items-end justify-end p-4 pb-[calc(var(--app-bottom-nav-height)+2rem+env(safe-area-inset-bottom,0px))] lg:p-6 lg:pb-6">
         <button
           type="button"
           onClick={handleLocate}
@@ -230,7 +230,7 @@ export default function MapView({ shops, onShopClick, center }: Props) {
       </div>
 
       {locationError ? (
-        <div className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom,0px))] left-1/2 z-[10060] max-w-[90vw] -translate-x-1/2 rounded-xl bg-danger/95 px-4 py-2.5 text-center text-xs text-white shadow-lg lg:bottom-24">
+        <div className="absolute bottom-[calc(var(--app-bottom-nav-height)+3.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-[10060] max-w-[90vw] -translate-x-1/2 rounded-xl bg-danger/95 px-4 py-2.5 text-center text-xs text-white shadow-lg lg:bottom-24">
           {locationError}
         </div>
       ) : null}

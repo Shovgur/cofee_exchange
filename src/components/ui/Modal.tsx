@@ -31,7 +31,7 @@ export default function Modal({ open, onClose, title, children, className }: Pro
       className={cn(
         'fixed inset-0 z-[10060] flex justify-center',
         /* mobile: лист над таб-баром, визуально стыкуется с ним */
-        'max-lg:items-end max-lg:pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))]',
+        'max-lg:items-end max-lg:pb-nav-safe',
         'lg:items-center lg:p-4',
       )}
     >

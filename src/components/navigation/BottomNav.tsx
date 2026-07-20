@@ -30,7 +30,7 @@ export default function BottomNav() {
   return (
     <nav
       className={cn(
-        'fixed inset-x-0 bottom-0 z-[10050] lg:hidden',
+        'app-bottom-nav w-full shrink-0 lg:hidden',
         'bg-bg shadow-[0_-4px_16px_rgba(47,36,28,0.08)]',
         'pb-[env(safe-area-inset-bottom,0px)]',
       )}

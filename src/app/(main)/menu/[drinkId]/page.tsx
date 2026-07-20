@@ -262,7 +262,7 @@ export default function DrinkPage({ params }: PageProps) {
 
   return (
     <AuthGate fallbackMessage="Карточка напитка и возможность покупки доступны только авторизованным пользователям.">
-      <div className="pb-[calc(7rem+env(safe-area-inset-bottom,0px))] lg:pb-6">
+      <div className="pb-[calc(var(--app-bottom-nav-height)+4.25rem+env(safe-area-inset-bottom,0px))] lg:pb-6">
         {/* Top bar */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <button
@@ -398,10 +398,7 @@ export default function DrinkPage({ params }: PageProps) {
 
         {/* Fixed continue button with blur overlay (mobile) */}
         <div
-          className="lg:hidden fixed inset-x-0 z-[10035]"
-          style={{
-            bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))",
-          }}
+          className="lg:hidden fixed inset-x-0 z-[10035] bottom-[calc(var(--app-bottom-nav-height)+1.5rem+env(safe-area-inset-bottom,0px))]"
         >
           {/* Blur fade above button */}
           <div

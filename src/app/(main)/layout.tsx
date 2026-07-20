@@ -17,12 +17,10 @@ export default function MainLayout({ children }: { children: ReactNode }) {
               "lg:max-w-none lg:mx-0 lg:static lg:min-h-screen lg:overflow-visible",
             )}
           >
-            <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-visible scrollable bg-bg pb-nav-safe lg:overflow-visible lg:pb-0">
+            <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-visible scrollable bg-bg max-lg:pb-3 lg:overflow-visible">
               {children}
             </main>
-            <div className="lg:hidden shrink-0">
-              <BottomNav />
-            </div>
+            <BottomNav />
           </div>
         </div>
       </div>
