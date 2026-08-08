@@ -92,6 +92,8 @@ export function couponStatusLabel(status: string): string {
     used: 'Использован',
     expired: 'Просрочен',
     cancelled: 'Отменён',
+    refunded: 'Возвращён',
+    needs_review: 'Требует проверки',
   };
   return map[status] ?? status;
 }
@@ -103,6 +105,8 @@ export function couponStatusColor(status: string): string {
     used: 'bg-muted/20 text-muted',
     expired: 'bg-danger/20 text-danger',
     cancelled: 'bg-danger/10 text-danger/70',
+    refunded: 'bg-danger/10 text-danger/70',
+    needs_review: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400',
   };
   return map[status] ?? '';
 }

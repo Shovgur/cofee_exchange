@@ -1,5 +1,5 @@
 import { loyaltyFetch, loyaltyJson } from '@/lib/api/loyalty/client';
-import type { ApiBarcode, ApiUserProfile } from '@/lib/api/loyalty/types';
+import type { ApiBarcode, ApiGender, ApiUserProfile } from '@/lib/api/loyalty/types';
 
 export async function fetchCurrentUser(): Promise<ApiUserProfile> {
   return loyaltyFetch<ApiUserProfile>('users/me', { auth: true });
@@ -12,6 +12,7 @@ export async function patchCurrentUser(
     middle_name: string | null;
     birth_date: string;
     email: string;
+    gender: ApiGender;
     country_code: string;
     consent_version: string;
   }>,

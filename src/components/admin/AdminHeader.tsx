@@ -12,6 +12,7 @@ const PAGE_TITLES: { prefix: string; title: string }[] = [
   { prefix: '/admin/loyalty/bean-prices', title: 'Цены в Бинах' },
   { prefix: '/admin/loyalty/alerts', title: 'Алерты антифрода' },
   { prefix: '/admin/loyalty/users', title: 'Карточка пользователя' },
+  { prefix: '/admin/loyalty/coupons', title: 'Купоны' },
   { prefix: '/admin/loyalty', title: 'Пользователи лояльности' },
 ];
 

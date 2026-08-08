@@ -168,6 +168,7 @@ export interface User {
   profileCompleted?: boolean;
   email?: string;
   birthDate?: string;
+  gender?: 'male' | 'female';
 }
 
 // Purchase notification

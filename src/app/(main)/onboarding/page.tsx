@@ -8,6 +8,7 @@ import { useCountry } from '@/contexts/CountryContext';
 import { fetchRules, patchCurrentUser } from '@/lib/api/loyalty';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
+import GenderSelect, { type Gender } from '@/components/ui/GenderSelect';
 
 type Step = 'profile' | 'rules' | 'done';
 
@@ -26,6 +27,7 @@ export default function OnboardingPage() {
     birth_date: '',
     email: '',
   });
+  const [gender, setGender] = useState<Gender | null>(null);
 
   // Rules
   const [rulesText, setRulesText] = useState<string | null>(null);
@@ -71,6 +73,7 @@ export default function OnboardingPage() {
         middle_name: form.middle_name.trim() || null,
         birth_date: form.birth_date || undefined,
         email: form.email.trim() || undefined,
+        gender: gender ?? undefined,
       });
       await loadRules();
       setStep('rules');
@@ -174,6 +177,11 @@ export default function OnboardingPage() {
               />
             </div>
           ))}
+
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1.5">Пол</label>
+            <GenderSelect value={gender} onChange={setGender} disabled={saving} />
+          </div>
 
           <div className="flex gap-3 pt-2">
             <Button

@@ -108,6 +108,7 @@ export function mapProfileToUser(
     profileCompleted: profile.profile_completed,
     email: profile.email ?? undefined,
     birthDate: profile.birth_date ?? undefined,
+    gender: profile.gender ?? undefined,
   };
 }
 
@@ -115,6 +116,7 @@ function mapCouponStatus(status: ApiCoupon['status']): CouponStatus {
   if (status === 'reserved') return 'reserved';
   if (status === 'expired') return 'expired';
   if (status === 'used') return 'used';
+  if (status === 'refunded') return 'cancelled';
   return 'active';
 }
 

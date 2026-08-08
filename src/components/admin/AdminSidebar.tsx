@@ -13,6 +13,7 @@ import {
   Award,
   ShieldAlert,
   Coffee,
+  Ticket,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,6 +29,7 @@ const SECTION_NAV = [
 
 const LOYALTY_NAV = [
   { href: '/admin/loyalty', icon: Users, label: 'Пользователи', exact: true },
+  { href: '/admin/loyalty/coupons', icon: Ticket, label: 'Купоны', exact: false },
   { href: '/admin/loyalty/settings', icon: Award, label: 'Программа лояльности', exact: false },
   { href: '/admin/loyalty/bean-prices', icon: Coffee, label: 'Цены в Бинах', exact: false },
   { href: '/admin/loyalty/alerts', icon: ShieldAlert, label: 'Алерты', exact: false },

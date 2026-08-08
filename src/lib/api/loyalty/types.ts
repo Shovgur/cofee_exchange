@@ -11,6 +11,9 @@ export interface ApiTokenPair {
   is_new: boolean;
 }
 
+/** Пол пользователя. Значения задаёт фронт, бэк хранит строку как есть. */
+export type ApiGender = 'male' | 'female';
+
 export interface ApiUserProfile {
   id: string;
   phone: string;
@@ -20,6 +23,7 @@ export interface ApiUserProfile {
   middle_name: string | null;
   birth_date: string | null;
   email: string | null;
+  gender: ApiGender | null;
   country_code: string;
   consent_version: string | null;
   profile_completed: boolean;
@@ -73,7 +77,12 @@ export interface ApiLoyaltyBalance {
   balance: number;
 }
 
-export type ApiLoyaltyTransactionType = 'accrual' | 'spend' | 'expire';
+export type ApiLoyaltyTransactionType =
+  | 'accrual'
+  | 'spend'
+  | 'expire'
+  | 'refund'
+  | 'clawback';
 
 export interface ApiLoyaltyTransaction {
   id: string;
@@ -91,8 +100,16 @@ export interface ApiLoyaltyTransactionsPage {
   offset: number;
 }
 
-export type ApiCouponStatus = 'active' | 'reserved' | 'used' | 'expired';
-export type ApiPurchaseKind = 'bean' | 'money';
+export type ApiCouponStatus =
+  | 'active'
+  | 'reserved'
+  | 'used'
+  | 'expired'
+  | 'needs_review'
+  | 'refunded';
+
+/** `manual` — купон выдан админом вручную, без оплаты. */
+export type ApiPurchaseKind = 'bean' | 'money' | 'manual';
 
 export interface ApiCouponSnapshotItem {
   kind: 'drink' | 'modifier';

@@ -32,7 +32,13 @@ import CountrySelector from '@/components/country/CountrySelector';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import CoffeeBeanIcon from '@/components/ui/CoffeeBeanIcon';
+import GenderSelect, { type Gender } from '@/components/ui/GenderSelect';
 import { formatDateTime, cn } from '@/lib/utils';
+import {
+  transactionLabel,
+  isCredit,
+  formatSignedBeans,
+} from '@/lib/loyalty/transactions';
 import {
   fetchUserBarcode,
   fetchLoyaltyTransactions,
@@ -70,15 +76,11 @@ function NotificationItem({
 // ── Bean transaction history ──────────────────────────────────────────────
 
 function txIcon(type: ApiLoyaltyTransaction['type']) {
-  if (type === 'accrual') return <ArrowDownCircle size={18} className="text-green-500 shrink-0" />;
+  if (type === 'accrual' || type === 'refund') {
+    return <ArrowDownCircle size={18} className="text-green-500 shrink-0" />;
+  }
   if (type === 'spend') return <ArrowUpCircle size={18} className="text-orange shrink-0" />;
   return <TimerReset size={18} className="text-muted shrink-0" />;
-}
-
-function txLabel(type: ApiLoyaltyTransaction['type']) {
-  if (type === 'accrual') return 'Начисление';
-  if (type === 'spend') return 'Списание';
-  return 'Сгорание';
 }
 
 function BeanHistoryTab() {
@@ -114,16 +116,16 @@ function BeanHistoryTab() {
           <div className="flex items-center gap-3 min-w-0">
             {txIcon(tx.type)}
             <div className="min-w-0">
-              <div className="text-sm font-medium">{txLabel(tx.type)}</div>
+              <div className="text-sm font-medium">{transactionLabel(tx.type)}</div>
               {tx.comment && <div className="text-xs text-muted truncate">{tx.comment}</div>}
               <div className="text-xs text-muted">{formatDateTime(tx.created_at)}</div>
             </div>
           </div>
           <span className={cn(
             'text-sm font-semibold shrink-0 tabular-nums flex items-center gap-1',
-            tx.type === 'accrual' ? 'text-green-500' : 'text-muted',
+            isCredit(tx.amount) ? 'text-green-500' : 'text-muted',
           )}>
-            {tx.type === 'accrual' ? '+' : '−'}{Math.abs(tx.amount)}
+            {formatSignedBeans(tx.amount)}
             <CoffeeBeanIcon size={12} />
           </span>
         </div>
@@ -142,7 +144,14 @@ function EditProfileModal({
 }: {
   open: boolean;
   onClose: () => void;
-  initialValues: { first_name: string; last_name: string; middle_name: string; birth_date: string; email: string };
+  initialValues: {
+    first_name: string;
+    last_name: string;
+    middle_name: string;
+    birth_date: string;
+    email: string;
+    gender: Gender | null;
+  };
   onSaved: () => void;
 }) {
   const [form, setForm] = useState(initialValues);
@@ -163,6 +172,7 @@ function EditProfileModal({
         middle_name: form.middle_name || null,
         birth_date: form.birth_date || undefined,
         email: form.email || undefined,
+        gender: form.gender ?? undefined,
       });
       onSaved();
       onClose();
@@ -199,6 +209,14 @@ function EditProfileModal({
             />
           </div>
         ))}
+        <div>
+          <label className="block text-xs font-medium text-muted mb-1.5">Пол</label>
+          <GenderSelect
+            value={form.gender}
+            onChange={(gender) => setForm((f) => ({ ...f, gender }))}
+            disabled={saving}
+          />
+        </div>
         <div className="flex gap-3 pt-1">
           <Button variant="secondary" fullWidth onClick={onClose}>Отмена</Button>
           <Button fullWidth disabled={saving} onClick={handleSave} className="flex items-center justify-center gap-2">
@@ -293,6 +311,7 @@ export default function ProfilePage() {
     middle_name: user?.middleName ?? '',
     birth_date: user?.birthDate ?? '',
     email: user?.email ?? '',
+    gender: user?.gender ?? null,
   }), [user]);
 
   return (
