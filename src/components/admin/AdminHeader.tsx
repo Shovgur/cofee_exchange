@@ -8,6 +8,7 @@ const PAGE_TITLES: { prefix: string; title: string }[] = [
   { prefix: '/admin/settings', title: 'Настройки' },
   { prefix: '/admin/drinks', title: 'Напитки' },
   { prefix: '/admin/sales', title: 'Продажи' },
+  { prefix: '/admin/tv-menu', title: 'Конструктор ТВ-меню' },
   { prefix: '/admin/loyalty/settings', title: 'Программа лояльности' },
   { prefix: '/admin/loyalty/bean-prices', title: 'Цены в Бинах' },
   { prefix: '/admin/loyalty/alerts', title: 'Алерты антифрода' },

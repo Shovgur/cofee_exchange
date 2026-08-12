@@ -31,6 +31,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# конфиг ТВ-меню, сохраняемый админкой
+/.data/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

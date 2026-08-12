@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   Coffee,
   Ticket,
+  Monitor,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +26,7 @@ const SECTION_NAV = [
   { href: '/admin/settings', icon: SlidersHorizontal, label: 'Настройки', exact: false },
   { href: '/admin/drinks', icon: GlassWater, label: 'Напитки', exact: false },
   { href: '/admin/sales', icon: ShoppingCart, label: 'Продажи', exact: false },
+  { href: '/admin/tv-menu', icon: Monitor, label: 'ТВ-меню', exact: false },
 ] as const;
 
 const LOYALTY_NAV = [
