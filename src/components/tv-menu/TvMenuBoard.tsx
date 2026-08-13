@@ -1,16 +1,26 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import Image from 'next/image';
 import { cn, formatPrice } from '@/lib/utils';
-import type { Country, PriceTrend } from '@/types';
-import type { TvMenuConfig, TvMenuBackground } from '@/lib/tv-menu/config';
+import type { Country, PriceTrend, VolumePrice } from '@/types';
+import {
+  effectiveFontScale,
+  GRID_COLUMNS,
+  GRID_ROWS,
+  type TvBoardConfig,
+  type TvMenuBackground,
+  type TvMenuSection,
+} from '@/lib/tv-menu/config';
 import {
   CATEGORY_EMOJI,
+  sectionHasContent,
+  sectionVolumeColumns,
+  type ResolvedItem,
   type ResolvedScreen,
   type ResolvedSection,
 } from '@/lib/tv-menu/resolve';
 import { PriceRefreshBanner } from '@/components/menu/PriceRefreshBanner';
+import Sparkline from '@/components/tv-menu/Sparkline';
 
 /**
  * Палитра доски не зависит от темы приложения: телевизор в зале обычно
@@ -35,10 +45,13 @@ const PALETTE: Record<TvMenuBackground, Record<string, string>> = {
   },
 };
 
-const DENSITY_GAP: Record<TvMenuConfig['layout']['density'], number> = {
-  compact: 0.006,
-  normal: 0.01,
-  spacious: 0.016,
+const UP_COLOR = '#15803d';
+const DOWN_COLOR = '#c62828';
+
+const DENSITY_GAP: Record<TvBoardConfig['layout']['density'], number> = {
+  compact: 0.005,
+  normal: 0.009,
+  spacious: 0.014,
 };
 
 /**
@@ -74,183 +87,484 @@ function formatDate(d: Date) {
   return d.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-function TrendMark({ trend }: { trend: PriceTrend }) {
+function trendColor(change: number): string {
+  if (change > 0.5) return UP_COLOR;
+  if (change < -0.5) return DOWN_COLOR;
+  return 'var(--tv-muted)';
+}
+
+function PercentBadge({ change, size }: { change: number; size: string }) {
+  const rounded = Math.round(change);
+  if (rounded === 0) return null;
+  return (
+    <span
+      className="font-semibold tabular-nums"
+      style={{ color: trendColor(change), fontSize: size }}
+    >
+      {rounded > 0 ? '+' : '−'}
+      {Math.abs(rounded)}%
+    </span>
+  );
+}
+
+function TrendMark({ trend, size }: { trend: PriceTrend; size: string }) {
   if (trend === 'neutral') return null;
   const up = trend === 'up';
   return (
     <span
-      className="font-semibold tabular-nums"
-      style={{
-        color: up ? '#15803d' : '#c62828',
-        fontSize: scaled(0.011, '0.55rem', '0.9rem'),
-      }}
+      className="font-semibold"
+      style={{ color: up ? UP_COLOR : DOWN_COLOR, fontSize: size }}
     >
       {up ? '▲' : '▼'}
     </span>
   );
 }
 
-function SectionGrid({
-  section,
-  config,
+/** Цена + опциональные стрелка, процент и цена в Бинах. */
+function PriceCell({
+  volume,
+  board,
   country,
-  columns,
+  priceSize,
+  metaSize,
+  withLabel,
+}: {
+  volume: VolumePrice;
+  board: TvBoardConfig;
+  country: Country;
+  priceSize: string;
+  metaSize: string;
+  withLabel: boolean;
+}) {
+  const { layout } = board;
+  return (
+    <span className="inline-flex items-baseline gap-[0.35em] whitespace-nowrap">
+      {withLabel && (
+        <span style={{ color: 'var(--tv-muted)', fontSize: metaSize }}>{volume.label}</span>
+      )}
+      <span
+        className="font-bold tabular-nums"
+        style={{ color: 'var(--tv-text)', fontSize: priceSize }}
+      >
+        {formatPrice(volume.price, country.currencySymbol)}
+      </span>
+      {layout.showTrends && <TrendMark trend={volume.trend} size={metaSize} />}
+      {layout.showPercent && <PercentBadge change={volume.change} size={metaSize} />}
+      {layout.showBeanPrices && volume.priceBeans != null && (
+        <span
+          className="font-semibold tabular-nums"
+          style={{ color: 'var(--tv-accent)', fontSize: metaSize }}
+        >
+          {volume.priceBeans} Б
+        </span>
+      )}
+    </span>
+  );
+}
+
+// ── Режимы отображения напитков ───────────────────────────────────────────
+
+function CardsGrid({
+  resolved,
+  board,
+  country,
   flashMap,
   flashGen,
 }: {
-  section: ResolvedSection;
-  config: TvMenuConfig;
+  resolved: ResolvedSection;
+  board: TvBoardConfig;
   country: Country;
-  columns: number;
   flashMap: Map<string, PriceTrend>;
   flashGen: number;
 }) {
-  const { layout } = config;
-  const gap = DENSITY_GAP[layout.density];
+  const { section, items } = resolved;
+  const columns = section.columns ?? Math.max(1, Math.round(section.rect.w / 4));
+  const gap = DENSITY_GAP[board.layout.density];
 
   return (
-    <section>
-      {section.title.trim() && (
+    <div
+      className="grid min-h-0"
+      style={{
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+        gap: scaled(gap, '0.25rem', '1rem'),
+      }}
+    >
+      {items.map(({ drink, volumes }) => {
+        const flashTrend = flashMap.get(drink.id);
+        return (
+          <article
+            key={flashTrend ? `${drink.id}-${flashGen}` : drink.id}
+            className={cn(
+              'flex items-stretch rounded-xl border transition-[border-color,box-shadow] duration-300',
+              flashTrend === 'up' && 'tv-tile-update-up',
+              flashTrend === 'down' && 'tv-tile-update-down',
+              flashTrend === 'neutral' && 'tv-tile-update-neutral',
+            )}
+            style={{
+              background: 'var(--tv-surface-el)',
+              borderColor: 'var(--tv-border)',
+              gap: scaled(0.01, '0.3rem', '0.85rem'),
+              padding: scaled(0.008, '0.3rem', '0.8rem'),
+            }}
+          >
+            {board.layout.showPhotos && (
+              <div
+                className="relative shrink-0 overflow-hidden rounded-lg"
+                style={{
+                  background: 'var(--tv-surface)',
+                  height: scaled(0.05, '2rem', '4.5rem'),
+                  width: scaled(0.05, '2rem', '4.5rem'),
+                }}
+              >
+                {drink.photoUrl ? (
+                  // Фото приходят с произвольных доменов, next/image потребовал бы их регистрации.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={drink.photoUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div
+                    className="flex h-full w-full items-center justify-center opacity-50"
+                    style={{ fontSize: scaled(0.022, '0.9rem', '1.8rem') }}
+                  >
+                    {CATEGORY_EMOJI[drink.category]}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-[0.2em]">
+              <h3
+                className="font-semibold leading-tight line-clamp-2"
+                style={{ color: 'var(--tv-text)', fontSize: scaled(0.02, '0.7rem', '1.5rem') }}
+              >
+                {drink.name}
+              </h3>
+              <div
+                className="flex flex-wrap items-baseline"
+                style={{
+                  columnGap: scaled(0.014, '0.35rem', '1rem'),
+                  rowGap: scaled(0.003, '0.1rem', '0.3rem'),
+                }}
+              >
+                {volumes.map((v) => (
+                  <PriceCell
+                    key={flashTrend ? `${v.value}-${flashGen}` : v.value}
+                    volume={v}
+                    board={board}
+                    country={country}
+                    priceSize={scaled(0.022, '0.7rem', '1.7rem')}
+                    metaSize={scaled(0.012, '0.45rem', '0.9rem')}
+                    withLabel
+                  />
+                ))}
+              </div>
+              {section.showChart && (
+                <Sparkline
+                  points={volumes[0]?.priceHistory ?? []}
+                  color={trendColor(volumes[0]?.change ?? 0)}
+                  className="w-full"
+                  height={26}
+                />
+              )}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function ListRows({
+  resolved,
+  board,
+  country,
+  flashMap,
+  flashGen,
+}: {
+  resolved: ResolvedSection;
+  board: TvBoardConfig;
+  country: Country;
+  flashMap: Map<string, PriceTrend>;
+  flashGen: number;
+}) {
+  const { section, items } = resolved;
+
+  return (
+    <div className="flex min-h-0 flex-col">
+      {items.map(({ drink, volumes }) => {
+        const flashTrend = flashMap.get(drink.id);
+        return (
+          <div
+            key={flashTrend ? `${drink.id}-${flashGen}` : drink.id}
+            className={cn(
+              'flex items-center border-b last:border-0',
+              flashTrend === 'up' && 'tv-dp-price-up',
+              flashTrend === 'down' && 'tv-dp-price-down',
+            )}
+            style={{
+              borderColor: 'var(--tv-border)',
+              gap: scaled(0.012, '0.35rem', '1rem'),
+              paddingTop: scaled(0.005, '0.15rem', '0.5rem'),
+              paddingBottom: scaled(0.005, '0.15rem', '0.5rem'),
+            }}
+          >
+            {board.layout.showPhotos && drink.photoUrl && (
+              <div
+                className="relative shrink-0 overflow-hidden rounded-md"
+                style={{
+                  height: scaled(0.032, '1.25rem', '3rem'),
+                  width: scaled(0.032, '1.25rem', '3rem'),
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={drink.photoUrl} alt="" className="h-full w-full object-cover" />
+              </div>
+            )}
+            <span
+              className="min-w-0 flex-1 truncate font-medium"
+              style={{ color: 'var(--tv-text)', fontSize: scaled(0.019, '0.7rem', '1.4rem') }}
+            >
+              {drink.name}
+            </span>
+            {section.showChart && (
+              <Sparkline
+                points={volumes[0]?.priceHistory ?? []}
+                color={trendColor(volumes[0]?.change ?? 0)}
+                className="hidden shrink-0 sm:block"
+                width={90}
+                height={22}
+              />
+            )}
+            <span
+              className="flex shrink-0 items-baseline"
+              style={{ gap: scaled(0.012, '0.35rem', '0.9rem') }}
+            >
+              {volumes.map((v) => (
+                <PriceCell
+                  key={v.value}
+                  volume={v}
+                  board={board}
+                  country={country}
+                  priceSize={scaled(0.021, '0.7rem', '1.6rem')}
+                  metaSize={scaled(0.012, '0.45rem', '0.9rem')}
+                  withLabel={volumes.length > 1}
+                />
+              ))}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Объёмы выносятся в шапку один раз, ниже — строки напитков. */
+function VolumeTable({
+  resolved,
+  board,
+  country,
+}: {
+  resolved: ResolvedSection;
+  board: TvBoardConfig;
+  country: Country;
+}) {
+  const { section, items } = resolved;
+  const columns = sectionVolumeColumns(items);
+  const priceSize = scaled(0.021, '0.7rem', '1.6rem');
+  const metaSize = scaled(0.012, '0.45rem', '0.9rem');
+  const nameSize = scaled(0.019, '0.7rem', '1.4rem');
+
+  const gridTemplate = `minmax(0, 1fr) repeat(${columns.length}, minmax(0, auto))`;
+
+  return (
+    <div className="flex min-h-0 flex-col">
+      {/* Шапка с объёмами */}
+      <div
+        className="grid items-baseline border-b"
+        style={{
+          gridTemplateColumns: gridTemplate,
+          borderColor: 'var(--tv-accent)',
+          columnGap: scaled(0.016, '0.4rem', '1.25rem'),
+          paddingBottom: scaled(0.004, '0.15rem', '0.4rem'),
+        }}
+      >
+        <span />
+        {columns.map((label) => (
+          <span
+            key={label}
+            className="text-right font-bold uppercase tracking-wider"
+            style={{ color: 'var(--tv-accent)', fontSize: metaSize }}
+          >
+            {label}
+          </span>
+        ))}
+      </div>
+
+      {items.map(({ drink, volumes }) => {
+        const byLabel = new Map(volumes.map((v) => [v.label, v]));
+        return (
+          <div
+            key={drink.id}
+            className="grid items-baseline border-b last:border-0"
+            style={{
+              gridTemplateColumns: gridTemplate,
+              borderColor: 'var(--tv-border)',
+              columnGap: scaled(0.016, '0.4rem', '1.25rem'),
+              paddingTop: scaled(0.005, '0.15rem', '0.5rem'),
+              paddingBottom: scaled(0.005, '0.15rem', '0.5rem'),
+            }}
+          >
+            <span className="flex min-w-0 items-center gap-[0.5em]">
+              <span
+                className="min-w-0 truncate font-medium"
+                style={{ color: 'var(--tv-text)', fontSize: nameSize }}
+              >
+                {drink.name}
+              </span>
+              {section.showChart && (
+                <Sparkline
+                  points={volumes[0]?.priceHistory ?? []}
+                  color={trendColor(volumes[0]?.change ?? 0)}
+                  className="shrink-0"
+                  width={70}
+                  height={18}
+                />
+              )}
+            </span>
+
+            {columns.map((label) => {
+              const v = byLabel.get(label);
+              return (
+                <span key={label} className="text-right">
+                  {v ? (
+                    <PriceCell
+                      volume={v}
+                      board={board}
+                      country={country}
+                      priceSize={priceSize}
+                      metaSize={metaSize}
+                      withLabel={false}
+                    />
+                  ) : (
+                    <span style={{ color: 'var(--tv-muted)', fontSize: metaSize }}>—</span>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MediaBlock({ section }: { section: TvMenuSection }) {
+  if (!section.mediaUrl.trim()) return null;
+  const objectFit = section.mediaFit === 'contain' ? 'object-contain' : 'object-cover';
+
+  if (section.mediaType === 'video') {
+    return (
+      <video
+        src={section.mediaUrl}
+        className={cn('h-full w-full', objectFit)}
+        autoPlay
+        muted
+        loop
+        playsInline
+      />
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={section.mediaUrl} alt="" className={cn('h-full w-full', objectFit)} />
+  );
+}
+
+// ── Секция ────────────────────────────────────────────────────────────────
+
+function SectionBlock({
+  resolved,
+  board,
+  country,
+  flashMap,
+  flashGen,
+}: {
+  resolved: ResolvedSection;
+  board: TvBoardConfig;
+  country: Country;
+  flashMap: Map<string, PriceTrend>;
+  flashGen: number;
+}) {
+  const { section } = resolved;
+  const isMedia = section.kind === 'media';
+
+  return (
+    <div
+      className={cn('flex min-h-0 min-w-0 flex-col overflow-hidden', section.showFrame && 'rounded-2xl border')}
+      style={{
+        gridColumn: `${section.rect.x + 1} / span ${section.rect.w}`,
+        gridRow: `${section.rect.y + 1} / span ${section.rect.h}`,
+        background: isMedia ? 'transparent' : (section.background ?? 'var(--tv-surface)'),
+        borderColor: section.showFrame ? 'var(--tv-border)' : 'transparent',
+        padding: isMedia ? 0 : scaled(0.011, '0.35rem', '1rem'),
+      }}
+    >
+      {!isMedia && section.title.trim() && (
         <h2
-          className="font-bold border-b pb-[0.35em]"
+          className="shrink-0 border-b font-bold"
           style={{
             color: 'var(--tv-accent)',
             borderColor: 'color-mix(in srgb, var(--tv-accent) 25%, transparent)',
-            fontSize: scaled(0.028, '1.1rem', '2.25rem'),
-            marginBottom: scaled(0.014, '0.5rem', '1rem'),
+            fontSize: scaled(0.024, '0.85rem', '2rem'),
+            paddingBottom: scaled(0.004, '0.15rem', '0.4rem'),
+            marginBottom: scaled(0.008, '0.25rem', '0.75rem'),
           }}
         >
           {section.title}
         </h2>
       )}
 
-      <div
-        className="grid"
-        style={{
-          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-          gap: scaled(gap, '0.35rem', '1.1rem'),
-        }}
-      >
-        {section.items.map(({ drink, volumes }) => {
-          const flashTrend = flashMap.get(drink.id);
-          const key = flashTrend ? `${drink.id}-${flashGen}` : drink.id;
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {section.kind === 'media' && <MediaBlock section={section} />}
 
-          return (
-            <article
-              key={key}
-              className={cn(
-                'flex items-stretch rounded-2xl border transition-[border-color,box-shadow] duration-300',
-                flashTrend === 'up' && 'tv-tile-update-up',
-                flashTrend === 'down' && 'tv-tile-update-down',
-                flashTrend === 'neutral' && 'tv-tile-update-neutral',
-              )}
-              style={{
-                background: 'var(--tv-surface)',
-                borderColor: 'var(--tv-border)',
-                gap: scaled(0.012, '0.4rem', '1rem'),
-                padding: scaled(0.01, '0.4rem', '1rem'),
-              }}
-            >
-              {layout.showPhotos && (
-                <div
-                  className="relative shrink-0 overflow-hidden rounded-xl"
-                  style={{
-                    background: 'var(--tv-surface-el)',
-                    height: scaled(0.062, '2.75rem', '5.5rem'),
-                    width: scaled(0.062, '2.75rem', '5.5rem'),
-                  }}
-                >
-                  {drink.photoUrl ? (
-                    <Image
-                      src={drink.photoUrl}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      unoptimized
-                      sizes="120px"
-                    />
-                  ) : (
-                    <div
-                      className="flex h-full w-full items-center justify-center opacity-50"
-                      style={{ fontSize: scaled(0.026, '1rem', '2rem') }}
-                    >
-                      {CATEGORY_EMOJI[drink.category]}
-                    </div>
-                  )}
-                </div>
-              )}
+        {section.kind === 'text' && (
+          <p
+            className="whitespace-pre-wrap"
+            style={{ color: 'var(--tv-text)', fontSize: scaled(0.018, '0.65rem', '1.35rem') }}
+          >
+            {section.text}
+          </p>
+        )}
 
-              <div className="flex min-w-0 flex-1 flex-col justify-center gap-[0.25em]">
-                <h3
-                  className="font-semibold leading-tight line-clamp-2"
-                  style={{
-                    color: 'var(--tv-text)',
-                    fontSize: scaled(0.024, '0.8rem', '1.65rem'),
-                  }}
-                >
-                  {drink.name}
-                </h3>
-
-                <div
-                  className="flex flex-wrap"
-                  style={{
-                    columnGap: scaled(0.018, '0.4rem', '1.25rem'),
-                    rowGap: scaled(0.004, '0.15rem', '0.35rem'),
-                  }}
-                >
-                  {volumes.map((v) => (
-                    <div
-                      key={flashTrend ? `${v.value}-${flashGen}` : v.value}
-                      className="flex items-baseline gap-[0.4em]"
-                    >
-                      <span
-                        style={{
-                          color: 'var(--tv-muted)',
-                          fontSize: scaled(0.015, '0.55rem', '1rem'),
-                        }}
-                      >
-                        {v.label}
-                      </span>
-                      <span
-                        className={cn(
-                          'font-bold tabular-nums',
-                          flashTrend === 'up' && 'tv-dp-price-up',
-                          flashTrend === 'down' && 'tv-dp-price-down',
-                          flashTrend === 'neutral' && 'tv-dp-price-neutral',
-                        )}
-                        style={{
-                          color: 'var(--tv-text)',
-                          fontSize: scaled(0.025, '0.8rem', '1.85rem'),
-                        }}
-                      >
-                        {formatPrice(v.price, country.currencySymbol)}
-                      </span>
-                      {layout.showTrends && <TrendMark trend={v.trend} />}
-                      {layout.showBeanPrices && v.priceBeans != null && (
-                        <span
-                          className="font-semibold tabular-nums"
-                          style={{
-                            color: 'var(--tv-accent)',
-                            fontSize: scaled(0.013, '0.5rem', '0.95rem'),
-                          }}
-                        >
-                          {v.priceBeans} Б
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </article>
-          );
-        })}
+        {section.kind === 'drinks' && section.display === 'cards' && (
+          <CardsGrid
+            resolved={resolved}
+            board={board}
+            country={country}
+            flashMap={flashMap}
+            flashGen={flashGen}
+          />
+        )}
+        {section.kind === 'drinks' && section.display === 'list' && (
+          <ListRows
+            resolved={resolved}
+            board={board}
+            country={country}
+            flashMap={flashMap}
+            flashGen={flashGen}
+          />
+        )}
+        {section.kind === 'drinks' && section.display === 'table' && (
+          <VolumeTable resolved={resolved} board={board} country={country} />
+        )}
       </div>
-    </section>
+    </div>
   );
 }
 
+// ── Доска ─────────────────────────────────────────────────────────────────
+
 export interface TvMenuBoardProps {
-  config: TvMenuConfig;
+  board: TvBoardConfig;
   screen: ResolvedScreen | undefined;
   country: Country;
   loading?: boolean;
@@ -258,7 +572,6 @@ export interface TvMenuBoardProps {
   secondsUntilNextPoll?: number | null;
   flashMap?: Map<string, PriceTrend>;
   flashGen?: number;
-  /** Индикатор ротации: показывается, только когда экранов больше одного. */
   screenCount?: number;
   screenIndex?: number;
   className?: string;
@@ -267,7 +580,7 @@ export interface TvMenuBoardProps {
 const EMPTY_FLASH = new Map<string, PriceTrend>();
 
 export default function TvMenuBoard({
-  config,
+  board,
   screen,
   country,
   loading = false,
@@ -283,206 +596,246 @@ export default function TvMenuBoard({
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
-    if (!config.header.showClock) return;
+    if (!board.header.showClock) return;
     setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
-  }, [config.header.showClock]);
+  }, [board.header.showClock]);
 
-  const sections = (screen?.sections ?? []).filter((s) => s.items.length > 0);
+  const sections = (screen?.sections ?? []).filter(sectionHasContent);
   const hasAny = sections.length > 0;
 
   const rootStyle = {
-    ...PALETTE[config.theme.background],
-    '--tv-accent': config.theme.accent,
+    ...PALETTE[board.theme.background],
+    '--tv-accent': board.theme.accent,
     '--tv-w': `${width}px`,
-    '--tv-fs': String(config.layout.fontScale),
-    background: 'var(--tv-bg)',
+    '--tv-fs': String(effectiveFontScale(board)),
     color: 'var(--tv-text)',
   } as React.CSSProperties;
 
-  const pad = scaled(0.026, '0.75rem', '2.5rem');
+  const bgColor = board.theme.customBg ?? 'var(--tv-bg)';
+  const pad = scaled(0.02, '0.5rem', '2rem');
+  const hasBgImage = board.theme.bgImageUrl.trim().length > 0;
 
   return (
-    <div ref={ref} className={cn('flex h-full flex-col overflow-hidden', className)} style={rootStyle}>
-      <header
-        className="flex shrink-0 flex-col border-b"
-        style={{
-          background: 'var(--tv-surface)',
-          borderColor: 'var(--tv-border)',
-          paddingLeft: pad,
-          paddingRight: pad,
-          paddingTop: scaled(0.016, '0.5rem', '1.25rem'),
-          paddingBottom: scaled(0.016, '0.5rem', '1.25rem'),
-          gap: scaled(0.014, '0.45rem', '1rem'),
-        }}
-      >
-        <div className="flex flex-wrap items-end justify-between gap-[1em]">
-          <div className="flex min-w-0 items-center" style={{ gap: scaled(0.016, '0.5rem', '1.5rem') }}>
-            {config.header.logoEmoji && (
-              <div
-                className="flex shrink-0 items-center justify-center rounded-2xl"
-                style={{
-                  background: 'color-mix(in srgb, var(--tv-accent) 15%, transparent)',
-                  height: scaled(0.05, '1.75rem', '4rem'),
-                  width: scaled(0.05, '1.75rem', '4rem'),
-                  fontSize: scaled(0.024, '0.9rem', '2rem'),
-                }}
-              >
-                {config.header.logoEmoji}
-              </div>
-            )}
-            <div className="min-w-0">
-              <h1
-                className="font-bold leading-none tracking-tight"
-                style={{ fontSize: scaled(0.036, '1rem', '3rem') }}
-              >
-                <span style={{ color: 'var(--tv-text)' }}>{config.header.title}</span>{' '}
-                <span style={{ color: 'var(--tv-accent)' }}>{config.header.accentWord}</span>
-              </h1>
-              <p
-                className="mt-1 truncate capitalize"
-                style={{
-                  color: 'var(--tv-muted)',
-                  fontSize: scaled(0.015, '0.6rem', '1.125rem'),
-                }}
-              >
-                {config.header.subtitle} · {country.flag} {country.name}
-                {screenCount > 1 && screen?.title ? ` · ${screen.title}` : ''}
-              </p>
-            </div>
-          </div>
-
-          {config.header.showClock && (
-            <div className="text-right tabular-nums">
-              <div
-                className="font-semibold"
-                style={{
-                  color: 'var(--tv-accent)',
-                  fontSize: scaled(0.034, '1rem', '2.75rem'),
-                }}
-              >
-                {now ? formatClock(now) : '--:--'}
-              </div>
-              <div
-                className="capitalize"
-                style={{
-                  color: 'var(--tv-muted)',
-                  fontSize: scaled(0.013, '0.55rem', '1rem'),
-                }}
-              >
-                {now ? formatDate(now) : ''}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {config.header.showRefreshBanner && (
-          <PriceRefreshBanner
-            variant="tv"
-            loading={loading}
-            secondsUntilNextPoll={secondsUntilNextPoll}
+    <div
+      ref={ref}
+      className={cn('relative flex h-full flex-col overflow-hidden', className)}
+      style={{ ...rootStyle, background: bgColor }}
+    >
+      {/* Фоновая картинка с затемнением — под всем содержимым */}
+      {hasBgImage && (
+        <>
+          <div
+            className="pointer-events-none absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${board.theme.bgImageUrl})` }}
           />
-        )}
-      </header>
-
-      <main
-        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
-        style={{
-          paddingLeft: pad,
-          paddingRight: pad,
-          paddingTop: scaled(0.016, '0.5rem', '1.5rem'),
-          paddingBottom: scaled(0.016, '0.5rem', '1.5rem'),
-        }}
-      >
-        {loading && !hasAny && (
-          <div className="flex h-full items-center justify-center" style={{ color: 'var(--tv-muted)' }}>
-            Загрузка меню…
-          </div>
-        )}
-
-        {!loading && error && (
           <div
-            className="mx-auto max-w-2xl rounded-2xl border p-6 text-center"
-            style={{ borderColor: '#c6282866', background: '#c628281a', color: '#c62828' }}
-          >
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && !hasAny && (
-          <div className="flex h-full items-center justify-center" style={{ color: 'var(--tv-muted)' }}>
-            Пока нет позиций
-          </div>
-        )}
-
-        {!error && hasAny && (
-          <div
-            className="mx-auto flex max-w-[1800px] flex-col"
-            style={{ gap: scaled(0.028, '0.85rem', '2.5rem') }}
-          >
-            {sections.map((section) => (
-              <SectionGrid
-                key={section.id}
-                section={section}
-                config={config}
-                country={country}
-                columns={section.columns ?? config.layout.columns}
-                flashMap={flashMap}
-                flashGen={flashGen}
-              />
-            ))}
-          </div>
-        )}
-      </main>
-
-      {config.ticker.enabled && config.ticker.text.trim() && (
-        <div
-          className="shrink-0 overflow-hidden border-t py-[0.5em]"
-          style={{
-            borderColor: 'var(--tv-border)',
-            background: 'color-mix(in srgb, var(--tv-accent) 10%, var(--tv-surface))',
-          }}
-        >
-          <div
-            className="tv-ticker whitespace-nowrap font-medium"
-            style={{
-              color: 'var(--tv-text)',
-              fontSize: scaled(0.018, '0.65rem', '1.35rem'),
-              animationDuration: `${config.ticker.speedSec}s`,
-            }}
-          >
-            {config.ticker.text}
-          </div>
-        </div>
+            className="pointer-events-none absolute inset-0"
+            style={{ background: bgColor, opacity: board.theme.bgDim / 100 }}
+          />
+        </>
       )}
 
-      <footer
-        className="shrink-0 border-t py-[0.6em] text-center"
-        style={{
-          borderColor: 'var(--tv-border)',
-          background: 'var(--tv-surface)',
-          color: 'var(--tv-muted)',
-          fontSize: scaled(0.012, '0.5rem', '0.9rem'),
-        }}
-      >
-        <span>{config.footer}</span>
-        {screenCount > 1 && (
-          <span className="ml-3 inline-flex items-center gap-1 align-middle">
-            {Array.from({ length: screenCount }).map((_, i) => (
-              <span
-                key={i}
-                className="inline-block rounded-full"
-                style={{
-                  width: '0.5em',
-                  height: '0.5em',
-                  background: i === screenIndex ? 'var(--tv-accent)' : 'var(--tv-border)',
-                }}
-              />
-            ))}
-          </span>
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+        <header
+          className="flex shrink-0 flex-col"
+          style={{
+            paddingLeft: pad,
+            paddingRight: pad,
+            paddingTop: scaled(0.012, '0.4rem', '1rem'),
+            paddingBottom: scaled(0.01, '0.35rem', '0.85rem'),
+            gap: scaled(0.01, '0.35rem', '0.85rem'),
+          }}
+        >
+          <div className="flex flex-wrap items-end justify-between gap-[1em]">
+            <div
+              className="flex min-w-0 items-center"
+              style={{ gap: scaled(0.014, '0.4rem', '1.25rem') }}
+            >
+              {board.header.logoEmoji && (
+                <div
+                  className="flex shrink-0 items-center justify-center rounded-2xl"
+                  style={{
+                    background: 'color-mix(in srgb, var(--tv-accent) 15%, transparent)',
+                    height: scaled(0.042, '1.5rem', '3.5rem'),
+                    width: scaled(0.042, '1.5rem', '3.5rem'),
+                    fontSize: scaled(0.021, '0.8rem', '1.75rem'),
+                  }}
+                >
+                  {board.header.logoEmoji}
+                </div>
+              )}
+              <div className="min-w-0">
+                <h1
+                  className="font-bold leading-none tracking-tight"
+                  style={{ fontSize: scaled(0.032, '0.95rem', '2.75rem') }}
+                >
+                  <span style={{ color: 'var(--tv-text)' }}>{board.header.title}</span>{' '}
+                  <span style={{ color: 'var(--tv-accent)' }}>{board.header.accentWord}</span>
+                </h1>
+                {(board.header.subtitle.trim() ||
+                  board.header.showCountry ||
+                  (screenCount > 1 && screen?.title)) && (
+                  <p
+                    className="mt-1 truncate"
+                    style={{
+                      color: 'var(--tv-muted)',
+                      fontSize: scaled(0.013, '0.55rem', '1rem'),
+                    }}
+                  >
+                    {[
+                      board.header.subtitle.trim(),
+                      board.header.showCountry ? `${country.flag} ${country.name}` : '',
+                      screenCount > 1 ? screen?.title ?? '' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {board.header.showClock && (
+              <div className="text-right tabular-nums">
+                <div
+                  className="font-semibold"
+                  style={{
+                    color: 'var(--tv-accent)',
+                    fontSize: scaled(0.03, '0.95rem', '2.5rem'),
+                  }}
+                >
+                  {now ? formatClock(now) : '--:--'}
+                </div>
+                <div
+                  className="capitalize"
+                  style={{
+                    color: 'var(--tv-muted)',
+                    fontSize: scaled(0.012, '0.5rem', '0.9rem'),
+                  }}
+                >
+                  {now ? formatDate(now) : ''}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {board.header.showRefreshBanner && (
+            <PriceRefreshBanner
+              variant="tv"
+              loading={loading}
+              secondsUntilNextPoll={secondsUntilNextPoll}
+            />
+          )}
+        </header>
+
+        <main
+          className="min-h-0 flex-1 overflow-hidden"
+          style={{
+            paddingLeft: pad,
+            paddingRight: pad,
+            paddingBottom: scaled(0.012, '0.4rem', '1rem'),
+          }}
+        >
+          {loading && !hasAny && (
+            <div
+              className="flex h-full items-center justify-center"
+              style={{ color: 'var(--tv-muted)' }}
+            >
+              Загрузка меню…
+            </div>
+          )}
+
+          {!loading && error && (
+            <div
+              className="mx-auto max-w-2xl rounded-2xl border p-6 text-center"
+              style={{ borderColor: '#c6282866', background: '#c628281a', color: '#c62828' }}
+            >
+              {error}
+            </div>
+          )}
+
+          {!loading && !error && !hasAny && (
+            <div
+              className="flex h-full items-center justify-center"
+              style={{ color: 'var(--tv-muted)' }}
+            >
+              Пока нет позиций
+            </div>
+          )}
+
+          {!error && hasAny && (
+            <div
+              className="grid h-full"
+              style={{
+                gridTemplateColumns: `repeat(${GRID_COLUMNS}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${GRID_ROWS}, minmax(0, 1fr))`,
+                gap: scaled(DENSITY_GAP[board.layout.density], '0.25rem', '1rem'),
+              }}
+            >
+              {sections.map((resolved) => (
+                <SectionBlock
+                  key={resolved.section.id}
+                  resolved={resolved}
+                  board={board}
+                  country={country}
+                  flashMap={flashMap}
+                  flashGen={flashGen}
+                />
+              ))}
+            </div>
+          )}
+        </main>
+
+        {board.ticker.enabled && board.ticker.text.trim() && (
+          <div
+            className="shrink-0 overflow-hidden border-t py-[0.5em]"
+            style={{
+              borderColor: 'var(--tv-border)',
+              background: 'color-mix(in srgb, var(--tv-accent) 12%, var(--tv-surface))',
+            }}
+          >
+            <div
+              className="tv-ticker whitespace-nowrap font-medium"
+              style={{
+                color: 'var(--tv-text)',
+                fontSize: scaled(0.016, '0.6rem', '1.25rem'),
+                animationDuration: `${board.ticker.speedSec}s`,
+              }}
+            >
+              {board.ticker.text}
+            </div>
+          </div>
         )}
-      </footer>
+
+        {(board.footer.trim() || screenCount > 1) && (
+          <footer
+            className="shrink-0 border-t py-[0.5em] text-center"
+            style={{
+              borderColor: 'var(--tv-border)',
+              color: 'var(--tv-muted)',
+              fontSize: scaled(0.011, '0.45rem', '0.85rem'),
+            }}
+          >
+            <span>{board.footer}</span>
+            {screenCount > 1 && (
+              <span className="ml-3 inline-flex items-center gap-1 align-middle">
+                {Array.from({ length: screenCount }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="inline-block rounded-full"
+                    style={{
+                      width: '0.5em',
+                      height: '0.5em',
+                      background: i === screenIndex ? 'var(--tv-accent)' : 'var(--tv-border)',
+                    }}
+                  />
+                ))}
+              </span>
+            )}
+          </footer>
+        )}
+      </div>
     </div>
   );
 }

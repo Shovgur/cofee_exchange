@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 import {
-  defaultTvMenuConfig,
-  normalizeTvMenuConfig,
-  type TvMenuConfig,
+  defaultTvMenuDocument,
+  normalizeTvMenuDocument,
+  type TvMenuDocument,
 } from '@/lib/tv-menu/config';
 
 export const dynamic = 'force-dynamic';
@@ -20,22 +20,22 @@ const CONFIG_PATH = process.env.TV_MENU_CONFIG_PATH
 
 // Резервная копия в памяти: на read-only ФС (serverless) запись упадёт,
 // но в пределах живого инстанса конфиг продолжит работать.
-let memoryConfig: TvMenuConfig | null = null;
+let memoryDoc: TvMenuDocument | null = null;
 
-async function readConfig(): Promise<TvMenuConfig> {
+async function readDoc(): Promise<TvMenuDocument> {
   try {
     const raw = await fs.readFile(CONFIG_PATH, 'utf8');
-    return normalizeTvMenuConfig(JSON.parse(raw));
+    return normalizeTvMenuDocument(JSON.parse(raw));
   } catch {
-    return memoryConfig ?? defaultTvMenuConfig();
+    return memoryDoc ?? defaultTvMenuDocument();
   }
 }
 
-async function writeConfig(config: TvMenuConfig): Promise<{ persisted: boolean }> {
-  memoryConfig = config;
+async function writeDoc(doc: TvMenuDocument): Promise<{ persisted: boolean }> {
+  memoryDoc = doc;
   try {
     await fs.mkdir(path.dirname(CONFIG_PATH), { recursive: true });
-    await fs.writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+    await fs.writeFile(CONFIG_PATH, JSON.stringify(doc, null, 2), 'utf8');
     return { persisted: true };
   } catch {
     return { persisted: false };
@@ -43,10 +43,8 @@ async function writeConfig(config: TvMenuConfig): Promise<{ persisted: boolean }
 }
 
 export async function GET() {
-  const config = await readConfig();
-  return NextResponse.json(config, {
-    headers: { 'Cache-Control': 'no-store' },
-  });
+  const doc = await readDoc();
+  return NextResponse.json(doc, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function PUT(request: NextRequest) {
@@ -57,12 +55,12 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Некорректный JSON' }, { status: 400 });
   }
 
-  const config = normalizeTvMenuConfig(body);
-  config.updatedAt = new Date().toISOString();
+  const doc = normalizeTvMenuDocument(body);
+  doc.updatedAt = new Date().toISOString();
 
-  const { persisted } = await writeConfig(config);
+  const { persisted } = await writeDoc(doc);
   return NextResponse.json(
-    { ...config, persisted },
+    { ...doc, persisted },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }
