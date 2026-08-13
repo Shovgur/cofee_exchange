@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { cn, formatPrice } from '@/lib/utils';
 import type { Country, PriceTrend, VolumePrice } from '@/types';
 import {
-  effectiveFontScale,
+  boardWidthCm,
   GRID_COLUMNS,
   GRID_ROWS,
   type TvBoardConfig,
@@ -15,7 +15,6 @@ import {
   CATEGORY_EMOJI,
   sectionHasContent,
   sectionVolumeColumns,
-  type ResolvedItem,
   type ResolvedScreen,
   type ResolvedSection,
 } from '@/lib/tv-menu/resolve';
@@ -48,18 +47,21 @@ const PALETTE: Record<TvMenuBackground, Record<string, string>> = {
 const UP_COLOR = '#15803d';
 const DOWN_COLOR = '#c62828';
 
+/** Отступы между блоками, в сантиметрах. */
 const DENSITY_GAP: Record<TvBoardConfig['layout']['density'], number> = {
-  compact: 0.005,
-  normal: 0.009,
-  spacious: 0.014,
+  compact: 0.5,
+  normal: 0.9,
+  spacious: 1.35,
 };
 
 /**
- * Размеры считаются от ширины самой доски, а не от вьюпорта: так один и тот же
- * компонент одинаково выглядит на телевизоре и в уменьшенном превью админки.
+ * Все размеры заданы в сантиметрах реального экрана: `--tv-cm` — это сколько
+ * пикселей приходится на один сантиметр доски. Поэтому диагональ меняет не
+ * размер надписей, а количество места: чем больше телевизор, тем больше
+ * позиций помещается при том же физическом кегле. Масштаб 100 % — ровно 1:1.
  */
-function scaled(ratio: number, min: string, max: string): string {
-  return `clamp(${min}, calc(var(--tv-w) * ${ratio} * var(--tv-fs)), ${max})`;
+function cm(value: number): string {
+  return `calc(var(--tv-cm) * ${value} * var(--tv-fs))`;
 }
 
 function useElementWidth<T extends HTMLElement>() {
@@ -179,14 +181,13 @@ function CardsGrid({
 }) {
   const { section, items } = resolved;
   const columns = section.columns ?? Math.max(1, Math.round(section.rect.w / 4));
-  const gap = DENSITY_GAP[board.layout.density];
 
   return (
     <div
       className="grid min-h-0"
       style={{
         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-        gap: scaled(gap, '0.25rem', '1rem'),
+        gap: cm(DENSITY_GAP[board.layout.density]),
       }}
     >
       {items.map(({ drink, volumes }) => {
@@ -203,8 +204,8 @@ function CardsGrid({
             style={{
               background: 'var(--tv-surface-el)',
               borderColor: 'var(--tv-border)',
-              gap: scaled(0.01, '0.3rem', '0.85rem'),
-              padding: scaled(0.008, '0.3rem', '0.8rem'),
+              gap: cm(0.96),
+              padding: cm(0.77),
             }}
           >
             {board.layout.showPhotos && (
@@ -212,8 +213,8 @@ function CardsGrid({
                 className="relative shrink-0 overflow-hidden rounded-lg"
                 style={{
                   background: 'var(--tv-surface)',
-                  height: scaled(0.05, '2rem', '4.5rem'),
-                  width: scaled(0.05, '2rem', '4.5rem'),
+                  height: cm(4.8),
+                  width: cm(4.8),
                 }}
               >
                 {drink.photoUrl ? (
@@ -223,7 +224,7 @@ function CardsGrid({
                 ) : (
                   <div
                     className="flex h-full w-full items-center justify-center opacity-50"
-                    style={{ fontSize: scaled(0.022, '0.9rem', '1.8rem') }}
+                    style={{ fontSize: cm(2.11) }}
                   >
                     {CATEGORY_EMOJI[drink.category]}
                   </div>
@@ -234,16 +235,13 @@ function CardsGrid({
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-[0.2em]">
               <h3
                 className="font-semibold leading-tight line-clamp-2"
-                style={{ color: 'var(--tv-text)', fontSize: scaled(0.02, '0.7rem', '1.5rem') }}
+                style={{ color: 'var(--tv-text)', fontSize: cm(1.92) }}
               >
                 {drink.name}
               </h3>
               <div
                 className="flex flex-wrap items-baseline"
-                style={{
-                  columnGap: scaled(0.014, '0.35rem', '1rem'),
-                  rowGap: scaled(0.003, '0.1rem', '0.3rem'),
-                }}
+                style={{ columnGap: cm(1.34), rowGap: cm(0.29) }}
               >
                 {volumes.map((v) => (
                   <PriceCell
@@ -251,8 +249,8 @@ function CardsGrid({
                     volume={v}
                     board={board}
                     country={country}
-                    priceSize={scaled(0.022, '0.7rem', '1.7rem')}
-                    metaSize={scaled(0.012, '0.45rem', '0.9rem')}
+                    priceSize={cm(2.11)}
+                    metaSize={cm(1.15)}
                     withLabel
                   />
                 ))}
@@ -302,18 +300,15 @@ function ListRows({
             )}
             style={{
               borderColor: 'var(--tv-border)',
-              gap: scaled(0.012, '0.35rem', '1rem'),
-              paddingTop: scaled(0.005, '0.15rem', '0.5rem'),
-              paddingBottom: scaled(0.005, '0.15rem', '0.5rem'),
+              gap: cm(1.15),
+              paddingTop: cm(0.48),
+              paddingBottom: cm(0.48),
             }}
           >
             {board.layout.showPhotos && drink.photoUrl && (
               <div
                 className="relative shrink-0 overflow-hidden rounded-md"
-                style={{
-                  height: scaled(0.032, '1.25rem', '3rem'),
-                  width: scaled(0.032, '1.25rem', '3rem'),
-                }}
+                style={{ height: cm(3.07), width: cm(3.07) }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={drink.photoUrl} alt="" className="h-full w-full object-cover" />
@@ -321,7 +316,7 @@ function ListRows({
             )}
             <span
               className="min-w-0 flex-1 truncate font-medium"
-              style={{ color: 'var(--tv-text)', fontSize: scaled(0.019, '0.7rem', '1.4rem') }}
+              style={{ color: 'var(--tv-text)', fontSize: cm(1.82) }}
             >
               {drink.name}
             </span>
@@ -334,18 +329,15 @@ function ListRows({
                 height={22}
               />
             )}
-            <span
-              className="flex shrink-0 items-baseline"
-              style={{ gap: scaled(0.012, '0.35rem', '0.9rem') }}
-            >
+            <span className="flex shrink-0 items-baseline" style={{ gap: cm(1.15) }}>
               {volumes.map((v) => (
                 <PriceCell
                   key={v.value}
                   volume={v}
                   board={board}
                   country={country}
-                  priceSize={scaled(0.021, '0.7rem', '1.6rem')}
-                  metaSize={scaled(0.012, '0.45rem', '0.9rem')}
+                  priceSize={cm(2.02)}
+                  metaSize={cm(1.15)}
                   withLabel={volumes.length > 1}
                 />
               ))}
@@ -369,9 +361,9 @@ function VolumeTable({
 }) {
   const { section, items } = resolved;
   const columns = sectionVolumeColumns(items);
-  const priceSize = scaled(0.021, '0.7rem', '1.6rem');
-  const metaSize = scaled(0.012, '0.45rem', '0.9rem');
-  const nameSize = scaled(0.019, '0.7rem', '1.4rem');
+  const priceSize = cm(2.02);
+  const metaSize = cm(1.15);
+  const nameSize = cm(1.82);
 
   const gridTemplate = `minmax(0, 1fr) repeat(${columns.length}, minmax(0, auto))`;
 
@@ -383,8 +375,8 @@ function VolumeTable({
         style={{
           gridTemplateColumns: gridTemplate,
           borderColor: 'var(--tv-accent)',
-          columnGap: scaled(0.016, '0.4rem', '1.25rem'),
-          paddingBottom: scaled(0.004, '0.15rem', '0.4rem'),
+          columnGap: cm(1.54),
+          paddingBottom: cm(0.38),
         }}
       >
         <span />
@@ -408,9 +400,9 @@ function VolumeTable({
             style={{
               gridTemplateColumns: gridTemplate,
               borderColor: 'var(--tv-border)',
-              columnGap: scaled(0.016, '0.4rem', '1.25rem'),
-              paddingTop: scaled(0.005, '0.15rem', '0.5rem'),
-              paddingBottom: scaled(0.005, '0.15rem', '0.5rem'),
+              columnGap: cm(1.54),
+              paddingTop: cm(0.48),
+              paddingBottom: cm(0.48),
             }}
           >
             <span className="flex min-w-0 items-center gap-[0.5em]">
@@ -505,7 +497,7 @@ function SectionBlock({
         gridRow: `${section.rect.y + 1} / span ${section.rect.h}`,
         background: isMedia ? 'transparent' : (section.background ?? 'var(--tv-surface)'),
         borderColor: section.showFrame ? 'var(--tv-border)' : 'transparent',
-        padding: isMedia ? 0 : scaled(0.011, '0.35rem', '1rem'),
+        padding: isMedia ? 0 : cm(1.06),
       }}
     >
       {!isMedia && section.title.trim() && (
@@ -514,9 +506,9 @@ function SectionBlock({
           style={{
             color: 'var(--tv-accent)',
             borderColor: 'color-mix(in srgb, var(--tv-accent) 25%, transparent)',
-            fontSize: scaled(0.024, '0.85rem', '2rem'),
-            paddingBottom: scaled(0.004, '0.15rem', '0.4rem'),
-            marginBottom: scaled(0.008, '0.25rem', '0.75rem'),
+            fontSize: cm(2.3),
+            paddingBottom: cm(0.38),
+            marginBottom: cm(0.77),
           }}
         >
           {section.title}
@@ -529,7 +521,7 @@ function SectionBlock({
         {section.kind === 'text' && (
           <p
             className="whitespace-pre-wrap"
-            style={{ color: 'var(--tv-text)', fontSize: scaled(0.018, '0.65rem', '1.35rem') }}
+            style={{ color: 'var(--tv-text)', fontSize: cm(1.73) }}
           >
             {section.text}
           </p>
@@ -605,16 +597,20 @@ export default function TvMenuBoard({
   const sections = (screen?.sections ?? []).filter(sectionHasContent);
   const hasAny = sections.length > 0;
 
+  // Доска занимает всю доступную ширину, поэтому один сантиметр экрана — это
+  // ширина в пикселях, поделённая на физическую ширину телевизора.
+  const pxPerCm = width / boardWidthCm(board.layout.screenDiagonalCm);
+
   const rootStyle = {
     ...PALETTE[board.theme.background],
     '--tv-accent': board.theme.accent,
-    '--tv-w': `${width}px`,
-    '--tv-fs': String(effectiveFontScale(board)),
+    '--tv-cm': `${pxPerCm}px`,
+    '--tv-fs': String(board.layout.fontScale),
     color: 'var(--tv-text)',
   } as React.CSSProperties;
 
   const bgColor = board.theme.customBg ?? 'var(--tv-bg)';
-  const pad = scaled(0.02, '0.5rem', '2rem');
+  const pad = cm(1.92);
   const hasBgImage = board.theme.bgImageUrl.trim().length > 0;
 
   return (
@@ -643,24 +639,21 @@ export default function TvMenuBoard({
           style={{
             paddingLeft: pad,
             paddingRight: pad,
-            paddingTop: scaled(0.012, '0.4rem', '1rem'),
-            paddingBottom: scaled(0.01, '0.35rem', '0.85rem'),
-            gap: scaled(0.01, '0.35rem', '0.85rem'),
+            paddingTop: cm(1.15),
+            paddingBottom: cm(0.96),
+            gap: cm(0.96),
           }}
         >
           <div className="flex flex-wrap items-end justify-between gap-[1em]">
-            <div
-              className="flex min-w-0 items-center"
-              style={{ gap: scaled(0.014, '0.4rem', '1.25rem') }}
-            >
+            <div className="flex min-w-0 items-center" style={{ gap: cm(1.34) }}>
               {board.header.logoEmoji && (
                 <div
                   className="flex shrink-0 items-center justify-center rounded-2xl"
                   style={{
                     background: 'color-mix(in srgb, var(--tv-accent) 15%, transparent)',
-                    height: scaled(0.042, '1.5rem', '3.5rem'),
-                    width: scaled(0.042, '1.5rem', '3.5rem'),
-                    fontSize: scaled(0.021, '0.8rem', '1.75rem'),
+                    height: cm(4.03),
+                    width: cm(4.03),
+                    fontSize: cm(2.02),
                   }}
                 >
                   {board.header.logoEmoji}
@@ -669,7 +662,7 @@ export default function TvMenuBoard({
               <div className="min-w-0">
                 <h1
                   className="font-bold leading-none tracking-tight"
-                  style={{ fontSize: scaled(0.032, '0.95rem', '2.75rem') }}
+                  style={{ fontSize: cm(3.07) }}
                 >
                   <span style={{ color: 'var(--tv-text)' }}>{board.header.title}</span>{' '}
                   <span style={{ color: 'var(--tv-accent)' }}>{board.header.accentWord}</span>
@@ -679,10 +672,7 @@ export default function TvMenuBoard({
                   (screenCount > 1 && screen?.title)) && (
                   <p
                     className="mt-1 truncate"
-                    style={{
-                      color: 'var(--tv-muted)',
-                      fontSize: scaled(0.013, '0.55rem', '1rem'),
-                    }}
+                    style={{ color: 'var(--tv-muted)', fontSize: cm(1.25) }}
                   >
                     {[
                       board.header.subtitle.trim(),
@@ -700,19 +690,13 @@ export default function TvMenuBoard({
               <div className="text-right tabular-nums">
                 <div
                   className="font-semibold"
-                  style={{
-                    color: 'var(--tv-accent)',
-                    fontSize: scaled(0.03, '0.95rem', '2.5rem'),
-                  }}
+                  style={{ color: 'var(--tv-accent)', fontSize: cm(2.88) }}
                 >
                   {now ? formatClock(now) : '--:--'}
                 </div>
                 <div
                   className="capitalize"
-                  style={{
-                    color: 'var(--tv-muted)',
-                    fontSize: scaled(0.012, '0.5rem', '0.9rem'),
-                  }}
+                  style={{ color: 'var(--tv-muted)', fontSize: cm(1.15) }}
                 >
                   {now ? formatDate(now) : ''}
                 </div>
@@ -731,11 +715,7 @@ export default function TvMenuBoard({
 
         <main
           className="min-h-0 flex-1 overflow-hidden"
-          style={{
-            paddingLeft: pad,
-            paddingRight: pad,
-            paddingBottom: scaled(0.012, '0.4rem', '1rem'),
-          }}
+          style={{ paddingLeft: pad, paddingRight: pad, paddingBottom: cm(1.15) }}
         >
           {loading && !hasAny && (
             <div
@@ -770,7 +750,7 @@ export default function TvMenuBoard({
               style={{
                 gridTemplateColumns: `repeat(${GRID_COLUMNS}, minmax(0, 1fr))`,
                 gridTemplateRows: `repeat(${GRID_ROWS}, minmax(0, 1fr))`,
-                gap: scaled(DENSITY_GAP[board.layout.density], '0.25rem', '1rem'),
+                gap: cm(DENSITY_GAP[board.layout.density]),
               }}
             >
               {sections.map((resolved) => (
@@ -799,7 +779,7 @@ export default function TvMenuBoard({
               className="tv-ticker whitespace-nowrap font-medium"
               style={{
                 color: 'var(--tv-text)',
-                fontSize: scaled(0.016, '0.6rem', '1.25rem'),
+                fontSize: cm(1.54),
                 animationDuration: `${board.ticker.speedSec}s`,
               }}
             >
@@ -814,7 +794,7 @@ export default function TvMenuBoard({
             style={{
               borderColor: 'var(--tv-border)',
               color: 'var(--tv-muted)',
-              fontSize: scaled(0.011, '0.45rem', '0.85rem'),
+              fontSize: cm(1.06),
             }}
           >
             <span>{board.footer}</span>

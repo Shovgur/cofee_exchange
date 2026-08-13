@@ -16,8 +16,22 @@ export const TV_MENU_CONFIG_VERSION = 2;
 export const GRID_COLUMNS = 12;
 export const GRID_ROWS = 12;
 
-/** Опорная диагональ, относительно которой считается масштаб под размер ТВ. */
+/** Диагональ по умолчанию для новой доски. */
 export const REFERENCE_DIAGONAL_CM = 110;
+
+/**
+ * Доска всегда рисуется в пропорции 16:9, поэтому из диагонали однозначно
+ * получаются физические размеры рабочей области.
+ */
+const DIAGONAL_TO_WIDTH = 16 / Math.hypot(16, 9);
+
+export function boardWidthCm(diagonalCm: number): number {
+  return diagonalCm * DIAGONAL_TO_WIDTH;
+}
+
+export function boardHeightCm(diagonalCm: number): number {
+  return (boardWidthCm(diagonalCm) * 9) / 16;
+}
 
 export type TvMenuDensity = 'compact' | 'normal' | 'spacious';
 export type TvMenuBackground = 'dark' | 'light';
@@ -171,7 +185,7 @@ export function defaultBoard(name = 'Основное меню'): TvBoardConfig 
     },
     layout: {
       density: 'compact',
-      fontScale: 0.85,
+      fontScale: 1,
       screenDiagonalCm: REFERENCE_DIAGONAL_CM,
       showPhotos: true,
       showBeanPrices: false,
@@ -198,12 +212,6 @@ export function defaultTvMenuDocument(): TvMenuDocument {
     updatedAt: new Date(0).toISOString(),
     boards: [defaultBoard()],
   };
-}
-
-/** Итоговый множитель шрифта с поправкой на физический размер телевизора. */
-export function effectiveFontScale(board: TvBoardConfig): number {
-  const physical = board.layout.screenDiagonalCm / REFERENCE_DIAGONAL_CM;
-  return Math.min(2.5, Math.max(0.3, board.layout.fontScale * physical));
 }
 
 // ── Нормализация ──────────────────────────────────────────────────────────

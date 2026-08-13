@@ -35,14 +35,14 @@ import {
 } from '@/components/admin/tv-menu/controls';
 import { fetchTvMenuDocument, saveTvMenuDocument } from '@/lib/tv-menu/api';
 import {
-  effectiveFontScale,
+  boardHeightCm,
+  boardWidthCm,
   emptyScreen,
   emptySection,
   makeId,
   DEFAULT_ACCENT,
   GRID_COLUMNS,
   GRID_ROWS,
-  REFERENCE_DIAGONAL_CM,
   type TvBoardConfig,
   type TvGridRect,
   type TvMenuDocument,
@@ -237,7 +237,8 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
   }
 
   const pickerSection = activeScreen?.sections.find((s) => s.id === pickerSectionId) ?? null;
-  const effScale = effectiveFontScale(board);
+  const areaW = Math.round(boardWidthCm(board.layout.screenDiagonalCm));
+  const areaH = Math.round(boardHeightCm(board.layout.screenDiagonalCm));
 
   return (
     <>
@@ -491,7 +492,7 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
                   </h3>
                   <Field
                     label={`Диагональ телевизора · ${board.layout.screenDiagonalCm} см`}
-                    hint={`Опорный размер — ${REFERENCE_DIAGONAL_CM} см. Чем больше экран, тем крупнее текст.`}
+                    hint={`Рабочая область ${areaW} × ${areaH} см. Размеры надписей заданы в сантиметрах и от диагонали не зависят: чем больше экран, тем больше места и позиций.`}
                   >
                     <Slider
                       value={board.layout.screenDiagonalCm}
@@ -504,8 +505,8 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
                     />
                   </Field>
                   <Field
-                    label={`Точная подстройка · ${Math.round(board.layout.fontScale * 100)}%`}
-                    hint={`Итоговый масштаб: ${Math.round(effScale * 100)} %. Уменьшайте, чтобы поместилось больше позиций.`}
+                    label={`Масштаб содержимого · ${Math.round(board.layout.fontScale * 100)}%`}
+                    hint="100 % — размер 1:1. Меняйте, только если хочется крупнее или мельче: диагональ трогать для этого не нужно."
                   >
                     <Slider
                       value={Math.round(board.layout.fontScale * 100)}
@@ -706,7 +707,7 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Предпросмотр 16:9
+                  Предпросмотр · {areaW} × {areaH} см
                 </span>
                 {dirty && (
                   <span className="rounded-full bg-yellow-500/15 px-2 py-0.5 text-[10px] font-medium text-yellow-600 dark:text-yellow-400">
