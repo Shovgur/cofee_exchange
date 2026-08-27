@@ -65,9 +65,10 @@ function move<T>(arr: T[], from: number, to: number): T[] {
 
 /** Ищет свободную строку под новую секцию, чтобы блоки не наложились. */
 function nextFreeRect(sections: TvMenuSection[]): TvGridRect {
+  const defaultHeight = Math.round(GRID_ROWS / 3);
   const bottom = sections.reduce((max, s) => Math.max(max, s.rect.y + s.rect.h), 0);
-  const y = Math.min(bottom, GRID_ROWS - 3);
-  return { x: 0, y, w: GRID_COLUMNS, h: Math.min(4, GRID_ROWS - y) };
+  const y = Math.min(bottom, GRID_ROWS - 2);
+  return { x: 0, y, w: GRID_COLUMNS, h: Math.min(defaultHeight, GRID_ROWS - y) };
 }
 
 export default function AdminTvMenuBoardPage({ params }: { params: { boardId: string } }) {
@@ -169,7 +170,8 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
         .map((d) => ({ drinkId: d.id, volumes: [] as string[] }));
       if (items.length === 0) continue;
 
-      const h = Math.max(2, Math.min(GRID_ROWS - y, Math.ceil(items.length / 3) * 2 + 1));
+      const rows = Math.ceil(items.length / 3) * 4 + 2;
+      const h = Math.max(4, Math.min(GRID_ROWS - y, rows));
       const section = emptySection(CATEGORY_TITLE[category], { x: 0, y, w: GRID_COLUMNS, h });
       section.columns = 3;
       section.items = items;
@@ -237,8 +239,13 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
   }
 
   const pickerSection = activeScreen?.sections.find((s) => s.id === pickerSectionId) ?? null;
-  const areaW = Math.round(boardWidthCm(board.layout.screenDiagonalCm));
-  const areaH = Math.round(boardHeightCm(board.layout.screenDiagonalCm));
+  const isPortrait = board.layout.orientation === 'portrait';
+  const areaW = Math.round(
+    boardWidthCm(board.layout.screenDiagonalCm, board.layout.orientation),
+  );
+  const areaH = Math.round(
+    boardHeightCm(board.layout.screenDiagonalCm, board.layout.orientation),
+  );
 
   return (
     <>
@@ -398,6 +405,7 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
                             section={section}
                             index={i}
                             total={activeScreen.sections.length}
+                            drinks={drinks}
                             drinksById={drinksById}
                             selected={selectedSectionId === section.id}
                             onSelect={() => setSelectedSectionId(section.id)}
@@ -441,6 +449,16 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
               <div className="space-y-4">
                 <div className="space-y-3 rounded-2xl border border-border bg-surface p-4">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Шапка</h3>
+                  <Toggle
+                    label="Показывать шапку"
+                    checked={board.header.enabled}
+                    onChange={(v) => patchBoard((b) => ({ ...b, header: { ...b.header, enabled: v } }))}
+                  />
+                  {!board.header.enabled && (
+                    <p className="rounded-xl bg-surface-el px-3 py-2 text-[11px] text-muted">
+                      Шапка скрыта — секции начинаются от самого верха экрана.
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
                     <Field label="Название">
                       <TextInput
@@ -488,8 +506,23 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
 
                 <div className="space-y-3 rounded-2xl border border-border bg-surface p-4">
                   <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
-                    <Ruler size={13} /> Масштаб
+                    <Ruler size={13} /> Экран и масштаб
                   </h3>
+                  <Field
+                    label="Ориентация"
+                    hint="Для телевизора, повёрнутого вертикально, раскладка и предпросмотр становятся 9:16."
+                  >
+                    <Segmented
+                      value={board.layout.orientation}
+                      onChange={(v) =>
+                        patchBoard((b) => ({ ...b, layout: { ...b.layout, orientation: v } }))
+                      }
+                      options={[
+                        { value: 'landscape' as const, label: 'Горизонтально' },
+                        { value: 'portrait' as const, label: 'Вертикально' },
+                      ]}
+                    />
+                  </Field>
                   <Field
                     label={`Диагональ телевизора · ${board.layout.screenDiagonalCm} см`}
                     hint={`Рабочая область ${areaW} × ${areaH} см. Размеры надписей заданы в сантиметрах и от диагонали не зависят: чем больше экран, тем больше места и позиций.`}
@@ -515,6 +548,20 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
                       step={5}
                       onChange={(v) =>
                         patchBoard((b) => ({ ...b, layout: { ...b.layout, fontScale: v / 100 } }))
+                      }
+                    />
+                  </Field>
+                  <Field
+                    label={`Поля по краям · ${board.layout.paddingCm} см`}
+                    hint="0 — содержимое вплотную к углам экрана, без пустых зон."
+                  >
+                    <Slider
+                      value={board.layout.paddingCm}
+                      min={0}
+                      max={6}
+                      step={0.5}
+                      onChange={(v) =>
+                        patchBoard((b) => ({ ...b, layout: { ...b.layout, paddingCm: v } }))
                       }
                     />
                   </Field>
@@ -693,6 +740,7 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
                 <LayoutCanvas
                   sections={activeScreen.sections}
                   selectedId={selectedSectionId}
+                  orientation={board.layout.orientation}
                   onSelect={setSelectedSectionId}
                   onRectChange={(id, rect) =>
                     patchScreen(activeScreen.id, (s) => ({
@@ -715,7 +763,12 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
                   </span>
                 )}
               </div>
-              <div className="aspect-video w-full overflow-hidden rounded-2xl border border-border shadow-lg">
+              <div
+                className={cn(
+                  'w-full overflow-hidden rounded-2xl border border-border shadow-lg',
+                  isPortrait ? 'mx-auto aspect-[9/16] max-w-sm' : 'aspect-video',
+                )}
+              >
                 <TvMenuBoard
                   board={board}
                   screen={previewScreen}

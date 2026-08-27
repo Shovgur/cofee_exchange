@@ -1,12 +1,13 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Image as ImageIcon, Type, GlassWater } from 'lucide-react';
+import { Image as ImageIcon, Type, GlassWater, LineChart } from 'lucide-react';
 import {
   GRID_COLUMNS,
   GRID_ROWS,
   type TvGridRect,
   type TvMenuSection,
+  type TvOrientation,
 } from '@/lib/tv-menu/config';
 import { cn } from '@/lib/utils';
 
@@ -24,7 +25,11 @@ const KIND_ICON = {
   drinks: GlassWater,
   media: ImageIcon,
   text: Type,
+  chart: LineChart,
 } as const;
+
+/** Каждая N-я линия сетки рисуется ярче — так проще ориентироваться. */
+const MAJOR_STEP = 4;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -38,11 +43,13 @@ function clamp(value: number, min: number, max: number): number {
 export default function LayoutCanvas({
   sections,
   selectedId,
+  orientation,
   onSelect,
   onRectChange,
 }: {
   sections: TvMenuSection[];
   selectedId: string | null;
+  orientation: TvOrientation;
   onSelect: (id: string) => void;
   onRectChange: (id: string, rect: TvGridRect) => void;
 }) {
@@ -108,11 +115,23 @@ export default function LayoutCanvas({
       onPointerMove={handleMove}
       onPointerUp={endDrag}
       onPointerLeave={endDrag}
-      className="relative aspect-video w-full touch-none select-none overflow-hidden rounded-2xl border border-border bg-surface-el"
+      className={cn(
+        'relative w-full touch-none select-none overflow-hidden rounded-2xl border border-border bg-surface-el',
+        orientation === 'portrait' ? 'aspect-[9/16]' : 'aspect-video',
+      )}
       style={{
-        backgroundImage:
-          'linear-gradient(to right, rgba(110,95,84,0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(110,95,84,0.14) 1px, transparent 1px)',
-        backgroundSize: `${100 / GRID_COLUMNS}% ${100 / GRID_ROWS}%`,
+        backgroundImage: [
+          'linear-gradient(to right, rgba(110,95,84,0.22) 1px, transparent 1px)',
+          'linear-gradient(to bottom, rgba(110,95,84,0.22) 1px, transparent 1px)',
+          'linear-gradient(to right, rgba(110,95,84,0.09) 1px, transparent 1px)',
+          'linear-gradient(to bottom, rgba(110,95,84,0.09) 1px, transparent 1px)',
+        ].join(', '),
+        backgroundSize: [
+          `${(100 * MAJOR_STEP) / GRID_COLUMNS}% ${(100 * MAJOR_STEP) / GRID_ROWS}%`,
+          `${(100 * MAJOR_STEP) / GRID_COLUMNS}% ${(100 * MAJOR_STEP) / GRID_ROWS}%`,
+          `${100 / GRID_COLUMNS}% ${100 / GRID_ROWS}%`,
+          `${100 / GRID_COLUMNS}% ${100 / GRID_ROWS}%`,
+        ].join(', '),
       }}
     >
       <div

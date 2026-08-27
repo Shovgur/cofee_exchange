@@ -31,6 +31,8 @@ export interface ResolvedItem {
 export interface ResolvedSection {
   section: TvMenuSection;
   items: ResolvedItem[];
+  /** Заполняется только для секции-графика. */
+  chart: { drink: Drink; volume: VolumePrice } | null;
 }
 
 export interface ResolvedScreen {
@@ -62,7 +64,8 @@ function autoScreens(drinks: Drink[]): ResolvedScreen[] {
       .map((drink) => ({ drink, volumes: drink.volumes }));
     if (items.length === 0) continue;
 
-    const h = Math.max(2, Math.min(GRID_ROWS - y, Math.ceil(items.length / 3) * 2 + 1));
+    const rows = Math.ceil(items.length / 3) * 4 + 2;
+    const h = Math.max(4, Math.min(GRID_ROWS - y, rows));
     const section = emptySection(CATEGORY_TITLE[category], {
       x: 0,
       y,
@@ -73,7 +76,7 @@ function autoScreens(drinks: Drink[]): ResolvedScreen[] {
     section.columns = 3;
     y = Math.min(GRID_ROWS - 1, y + h);
 
-    sections.push({ section, items });
+    sections.push({ section, items, chart: null });
   }
 
   return [{ id: 'auto', title: 'Вся доска', sections }];
@@ -96,7 +99,20 @@ export function resolveScreens(
     id: screen.id,
     title: screen.title,
     sections: screen.sections.map((section) => {
-      if (section.kind !== 'drinks') return { section, items: [] };
+      if (section.kind === 'chart') {
+        const drink = byId.get(section.chartDrinkId);
+        const volume = drink
+          ? (drink.volumes.find((v) => v.value === section.chartVolume) ??
+            drink.volumes[0])
+          : undefined;
+        return {
+          section,
+          items: [],
+          chart: drink && volume ? { drink, volume } : null,
+        };
+      }
+
+      if (section.kind !== 'drinks') return { section, items: [], chart: null };
 
       const items: ResolvedItem[] = [];
       for (const ref of section.items) {
@@ -108,7 +124,7 @@ export function resolveScreens(
         if (volumes.length === 0) continue;
         items.push({ drink, volumes });
       }
-      return { section, items };
+      return { section, items, chart: null };
     }),
   }));
 }
@@ -118,6 +134,7 @@ export function sectionHasContent(resolved: ResolvedSection): boolean {
   const { section } = resolved;
   if (section.kind === 'media') return section.mediaUrl.trim().length > 0;
   if (section.kind === 'text') return section.text.trim().length > 0 || !!section.title.trim();
+  if (section.kind === 'chart') return resolved.chart !== null;
   return resolved.items.length > 0;
 }
 

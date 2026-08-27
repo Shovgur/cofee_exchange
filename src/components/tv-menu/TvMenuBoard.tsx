@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { cn, formatPrice } from '@/lib/utils';
 import type { Country, PriceTrend, VolumePrice } from '@/types';
 import {
@@ -19,7 +19,7 @@ import {
   type ResolvedSection,
 } from '@/lib/tv-menu/resolve';
 import { PriceRefreshBanner } from '@/components/menu/PriceRefreshBanner';
-import Sparkline from '@/components/tv-menu/Sparkline';
+import TvPriceChart from '@/components/tv-menu/TvPriceChart';
 
 /**
  * Палитра доски не зависит от темы приложения: телевизор в зале обычно
@@ -180,7 +180,10 @@ function CardsGrid({
   flashGen: number;
 }) {
   const { section, items } = resolved;
-  const columns = section.columns ?? Math.max(1, Math.round(section.rect.w / 4));
+  // Авто-режим: примерно одна карточка на треть ширины экрана.
+  const columns =
+    section.columns ??
+    Math.max(1, Math.round(section.rect.w / (GRID_COLUMNS / 3)));
 
   return (
     <div
@@ -255,14 +258,6 @@ function CardsGrid({
                   />
                 ))}
               </div>
-              {section.showChart && (
-                <Sparkline
-                  points={volumes[0]?.priceHistory ?? []}
-                  color={trendColor(volumes[0]?.change ?? 0)}
-                  className="w-full"
-                  height={26}
-                />
-              )}
             </div>
           </article>
         );
@@ -284,7 +279,7 @@ function ListRows({
   flashMap: Map<string, PriceTrend>;
   flashGen: number;
 }) {
-  const { section, items } = resolved;
+  const { items } = resolved;
 
   return (
     <div className="flex min-h-0 flex-col">
@@ -320,15 +315,6 @@ function ListRows({
             >
               {drink.name}
             </span>
-            {section.showChart && (
-              <Sparkline
-                points={volumes[0]?.priceHistory ?? []}
-                color={trendColor(volumes[0]?.change ?? 0)}
-                className="hidden shrink-0 sm:block"
-                width={90}
-                height={22}
-              />
-            )}
             <span className="flex shrink-0 items-baseline" style={{ gap: cm(1.15) }}>
               {volumes.map((v) => (
                 <PriceCell
@@ -349,7 +335,12 @@ function ListRows({
   );
 }
 
-/** Объёмы выносятся в шапку один раз, ниже — строки напитков. */
+/**
+ * Объёмы выносятся в шапку один раз, ниже — строки напитков.
+ *
+ * Вся таблица — одна CSS-сетка: если каждую строку рисовать своей сеткой,
+ * колонки считаются независимо и подписи объёмов расходятся с ценами.
+ */
 function VolumeTable({
   resolved,
   board,
@@ -359,74 +350,60 @@ function VolumeTable({
   board: TvBoardConfig;
   country: Country;
 }) {
-  const { section, items } = resolved;
+  const { items } = resolved;
   const columns = sectionVolumeColumns(items);
   const priceSize = cm(2.02);
   const metaSize = cm(1.15);
   const nameSize = cm(1.82);
-
-  const gridTemplate = `minmax(0, 1fr) repeat(${columns.length}, minmax(0, auto))`;
+  const cellPad = cm(0.48);
 
   return (
-    <div className="flex min-h-0 flex-col">
-      {/* Шапка с объёмами */}
-      <div
-        className="grid items-baseline border-b"
-        style={{
-          gridTemplateColumns: gridTemplate,
-          borderColor: 'var(--tv-accent)',
-          columnGap: cm(1.54),
-          paddingBottom: cm(0.38),
-        }}
-      >
-        <span />
-        {columns.map((label) => (
-          <span
-            key={label}
-            className="text-right font-bold uppercase tracking-wider"
-            style={{ color: 'var(--tv-accent)', fontSize: metaSize }}
-          >
-            {label}
-          </span>
-        ))}
-      </div>
+    <div
+      className="grid min-h-0 items-baseline"
+      style={{
+        gridTemplateColumns: `minmax(0, 1fr) repeat(${columns.length}, minmax(0, max-content))`,
+        columnGap: cm(1.54),
+      }}
+    >
+      {/* Шапка: подписи объёмов ровно над своими колонками */}
+      <span style={{ borderBottom: '1px solid var(--tv-accent)', paddingBottom: cellPad }} />
+      {columns.map((label) => (
+        <span
+          key={label}
+          className="text-right font-bold uppercase tracking-wider"
+          style={{
+            color: 'var(--tv-accent)',
+            fontSize: metaSize,
+            borderBottom: '1px solid var(--tv-accent)',
+            paddingBottom: cellPad,
+          }}
+        >
+          {label}
+        </span>
+      ))}
 
-      {items.map(({ drink, volumes }) => {
+      {items.map(({ drink, volumes }, rowIndex) => {
         const byLabel = new Map(volumes.map((v) => [v.label, v]));
+        const isLast = rowIndex === items.length - 1;
+        const cellStyle: React.CSSProperties = {
+          borderBottom: isLast ? 'none' : '1px solid var(--tv-border)',
+          paddingTop: cellPad,
+          paddingBottom: cellPad,
+        };
+
         return (
-          <div
-            key={drink.id}
-            className="grid items-baseline border-b last:border-0"
-            style={{
-              gridTemplateColumns: gridTemplate,
-              borderColor: 'var(--tv-border)',
-              columnGap: cm(1.54),
-              paddingTop: cm(0.48),
-              paddingBottom: cm(0.48),
-            }}
-          >
-            <span className="flex min-w-0 items-center gap-[0.5em]">
-              <span
-                className="min-w-0 truncate font-medium"
-                style={{ color: 'var(--tv-text)', fontSize: nameSize }}
-              >
-                {drink.name}
-              </span>
-              {section.showChart && (
-                <Sparkline
-                  points={volumes[0]?.priceHistory ?? []}
-                  color={trendColor(volumes[0]?.change ?? 0)}
-                  className="shrink-0"
-                  width={70}
-                  height={18}
-                />
-              )}
+          <Fragment key={drink.id}>
+            <span
+              className="min-w-0 truncate font-medium"
+              style={{ ...cellStyle, color: 'var(--tv-text)', fontSize: nameSize }}
+            >
+              {drink.name}
             </span>
 
             {columns.map((label) => {
               const v = byLabel.get(label);
               return (
-                <span key={label} className="text-right">
+                <span key={label} className="text-right" style={cellStyle}>
                   {v ? (
                     <PriceCell
                       volume={v}
@@ -442,9 +419,65 @@ function VolumeTable({
                 </span>
               );
             })}
-          </div>
+          </Fragment>
         );
       })}
+    </div>
+  );
+}
+
+/** Секция-график: название, объём, текущая цена и кривая акцентным цветом. */
+function ChartBlock({
+  resolved,
+  board,
+  country,
+}: {
+  resolved: ResolvedSection;
+  board: TvBoardConfig;
+  country: Country;
+}) {
+  const { chart } = resolved;
+  if (!chart) return null;
+  const { drink, volume } = chart;
+
+  return (
+    <div className="flex h-full min-h-0 flex-col" style={{ gap: cm(0.48) }}>
+      <div
+        className="flex shrink-0 flex-wrap items-baseline justify-between"
+        style={{ columnGap: cm(1.15) }}
+      >
+        <span className="flex items-baseline" style={{ gap: cm(0.77) }}>
+          <span
+            className="font-semibold"
+            style={{ color: 'var(--tv-text)', fontSize: cm(1.92) }}
+          >
+            {drink.name}
+          </span>
+          <span
+            className="font-medium"
+            style={{ color: 'var(--tv-accent)', fontSize: cm(1.34) }}
+          >
+            {volume.label}
+          </span>
+        </span>
+        <span className="flex items-baseline" style={{ gap: cm(0.58) }}>
+          <span
+            className="font-bold tabular-nums"
+            style={{ color: 'var(--tv-text)', fontSize: cm(2.11) }}
+          >
+            {formatPrice(volume.price, country.currencySymbol)}
+          </span>
+          <PercentBadge change={volume.change} size={cm(1.25)} />
+        </span>
+      </div>
+
+      <div className="min-h-0 flex-1">
+        <TvPriceChart
+          points={volume.priceHistory}
+          color={board.theme.accent}
+          className="h-full w-full"
+        />
+      </div>
     </div>
   );
 }
@@ -548,6 +581,9 @@ function SectionBlock({
         {section.kind === 'drinks' && section.display === 'table' && (
           <VolumeTable resolved={resolved} board={board} country={country} />
         )}
+        {section.kind === 'chart' && (
+          <ChartBlock resolved={resolved} board={board} country={country} />
+        )}
       </div>
     </div>
   );
@@ -599,7 +635,8 @@ export default function TvMenuBoard({
 
   // Доска занимает всю доступную ширину, поэтому один сантиметр экрана — это
   // ширина в пикселях, поделённая на физическую ширину телевизора.
-  const pxPerCm = width / boardWidthCm(board.layout.screenDiagonalCm);
+  const pxPerCm =
+    width / boardWidthCm(board.layout.screenDiagonalCm, board.layout.orientation);
 
   const rootStyle = {
     ...PALETTE[board.theme.background],
@@ -610,8 +647,20 @@ export default function TvMenuBoard({
   } as React.CSSProperties;
 
   const bgColor = board.theme.customBg ?? 'var(--tv-bg)';
-  const pad = cm(1.92);
+  const pad = cm(board.layout.paddingCm);
   const hasBgImage = board.theme.bgImageUrl.trim().length > 0;
+
+  const { header } = board;
+  // Пустая шапка не должна занимать место: иначе сетка начинается не от угла.
+  const showHeader =
+    header.enabled &&
+    (header.title.trim().length > 0 ||
+      header.accentWord.trim().length > 0 ||
+      header.subtitle.trim().length > 0 ||
+      header.logoEmoji.trim().length > 0 ||
+      header.showClock ||
+      header.showCountry ||
+      header.showRefreshBanner);
 
   return (
     <div
@@ -634,6 +683,7 @@ export default function TvMenuBoard({
       )}
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+        {showHeader && (
         <header
           className="flex shrink-0 flex-col"
           style={{
@@ -712,10 +762,16 @@ export default function TvMenuBoard({
             />
           )}
         </header>
+        )}
 
         <main
           className="min-h-0 flex-1 overflow-hidden"
-          style={{ paddingLeft: pad, paddingRight: pad, paddingBottom: cm(1.15) }}
+          style={{
+            paddingLeft: pad,
+            paddingRight: pad,
+            paddingTop: showHeader ? 0 : pad,
+            paddingBottom: pad,
+          }}
         >
           {loading && !hasAny && (
             <div

@@ -59,6 +59,7 @@ export default function SectionEditor({
   section,
   index,
   total,
+  drinks,
   drinksById,
   selected,
   onSelect,
@@ -70,6 +71,7 @@ export default function SectionEditor({
   section: TvMenuSection;
   index: number;
   total: number;
+  drinks: Drink[];
   drinksById: Map<string, Drink>;
   selected: boolean;
   onSelect: () => void;
@@ -169,7 +171,8 @@ export default function SectionEditor({
           onChange={(v) => onPatch((s) => ({ ...s, kind: v }))}
           options={[
             { value: 'drinks' as const, label: 'Напитки' },
-            { value: 'media' as const, label: 'Картинка/видео' },
+            { value: 'chart' as const, label: 'График' },
+            { value: 'media' as const, label: 'Медиа' },
             { value: 'text' as const, label: 'Текст' },
           ]}
         />
@@ -208,12 +211,6 @@ export default function SectionEditor({
               Объёмы выносятся в шапку один раз, ниже — список напитков с ценами по колонкам.
             </p>
           )}
-
-          <Toggle
-            label="График цены"
-            checked={section.showChart}
-            onChange={(v) => onPatch((s) => ({ ...s, showChart: v }))}
-          />
 
           <div className="space-y-1.5">
             {section.items.length === 0 && (
@@ -307,6 +304,58 @@ export default function SectionEditor({
           >
             <Plus size={14} /> Добавить напитки
           </button>
+        </div>
+      )}
+
+      {/* График одного напитка */}
+      {section.kind === 'chart' && (
+        <div className="space-y-3">
+          <Field
+            label="Напиток"
+            hint="На экране будут название, объём, текущая цена и кривая акцентным цветом."
+          >
+            <select
+              value={section.chartDrinkId}
+              onChange={(e) =>
+                onPatch((s) => ({ ...s, chartDrinkId: e.target.value, chartVolume: '' }))
+              }
+              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange/40"
+            >
+              <option value="">— выберите напиток —</option>
+              {drinks.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          {(() => {
+            const chartDrink = drinksById.get(section.chartDrinkId);
+            if (!chartDrink) return null;
+            const current = section.chartVolume || chartDrink.volumes[0]?.value || '';
+            return (
+              <Field label="Объём">
+                <div className="flex flex-wrap gap-1.5">
+                  {chartDrink.volumes.map((v) => (
+                    <button
+                      key={v.value}
+                      type="button"
+                      onClick={() => onPatch((s) => ({ ...s, chartVolume: v.value }))}
+                      className={cn(
+                        'rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
+                        current === v.value
+                          ? 'border-orange bg-orange/10 text-orange'
+                          : 'border-border text-muted hover:text-foreground',
+                      )}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            );
+          })()}
         </div>
       )}
 

@@ -1,5 +1,5 @@
 /**
- * Модель конфигурации ТВ-меню (версия 2).
+ * Модель конфигурации ТВ-меню (версия 3).
  *
  * Документ хранит несколько независимых досок. Каждая доска — это отдельная
  * ссылка для телевизора со своим оформлением, бегущей строкой и экранами,
@@ -10,32 +10,44 @@
  * они всегда берутся живыми из /prices, конфиг задаёт только состав и вид.
  */
 
-export const TV_MENU_CONFIG_VERSION = 2;
+export const TV_MENU_CONFIG_VERSION = 3;
 
-/** Сетка экрана: секции размещаются в этих условных единицах. */
-export const GRID_COLUMNS = 12;
-export const GRID_ROWS = 12;
+/**
+ * Сетка экрана: секции размещаются в этих условных единицах. Шаг мелкий,
+ * чтобы блоки можно было ставить точно, без крупных пустот по краям.
+ */
+export const GRID_COLUMNS = 24;
+export const GRID_ROWS = 24;
 
 /** Диагональ по умолчанию для новой доски. */
 export const REFERENCE_DIAGONAL_CM = 110;
 
-/**
- * Доска всегда рисуется в пропорции 16:9, поэтому из диагонали однозначно
- * получаются физические размеры рабочей области.
- */
-const DIAGONAL_TO_WIDTH = 16 / Math.hypot(16, 9);
+export type TvOrientation = 'landscape' | 'portrait';
 
-export function boardWidthCm(diagonalCm: number): number {
-  return diagonalCm * DIAGONAL_TO_WIDTH;
+/**
+ * Доска рисуется в пропорции 16:9 (или 9:16 для вертикального телевизора),
+ * поэтому из диагонали однозначно получаются физические размеры экрана.
+ */
+const LONG_SIDE = 16 / Math.hypot(16, 9);
+const SHORT_SIDE = 9 / Math.hypot(16, 9);
+
+export function boardWidthCm(
+  diagonalCm: number,
+  orientation: TvOrientation = 'landscape',
+): number {
+  return diagonalCm * (orientation === 'portrait' ? SHORT_SIDE : LONG_SIDE);
 }
 
-export function boardHeightCm(diagonalCm: number): number {
-  return (boardWidthCm(diagonalCm) * 9) / 16;
+export function boardHeightCm(
+  diagonalCm: number,
+  orientation: TvOrientation = 'landscape',
+): number {
+  return diagonalCm * (orientation === 'portrait' ? LONG_SIDE : SHORT_SIDE);
 }
 
 export type TvMenuDensity = 'compact' | 'normal' | 'spacious';
 export type TvMenuBackground = 'dark' | 'light';
-export type TvSectionKind = 'drinks' | 'media' | 'text';
+export type TvSectionKind = 'drinks' | 'media' | 'text' | 'chart';
 export type TvDrinksDisplay = 'cards' | 'list' | 'table';
 export type TvMediaFit = 'cover' | 'contain';
 
@@ -67,7 +79,11 @@ export interface TvMenuSection {
   /** Колонок внутри секции для режима карточек; null — авто. */
   columns: number | null;
   items: TvMenuItemRef[];
-  showChart: boolean;
+
+  // kind: 'chart' — график одного конкретного объёма одного напитка
+  chartDrinkId: string;
+  /** `VolumePrice.value`; пусто — первый доступный объём напитка. */
+  chartVolume: string;
 
   // kind: 'media'
   mediaUrl: string;
@@ -89,6 +105,8 @@ export interface TvBoardConfig {
   /** Название для админки; в URL используется id. */
   name: string;
   header: {
+    /** Выключенная шапка освобождает верх экрана — меню начинается от угла. */
+    enabled: boolean;
     title: string;
     accentWord: string;
     subtitle: string;
@@ -98,10 +116,13 @@ export interface TvBoardConfig {
     showRefreshBanner: boolean;
   };
   layout: {
+    orientation: TvOrientation;
     density: TvMenuDensity;
     fontScale: number;
-    /** Диагональ телевизора в сантиметрах — влияет на итоговый масштаб. */
+    /** Диагональ телевизора в сантиметрах — задаёт размер рабочей области. */
     screenDiagonalCm: number;
+    /** Поля по краям экрана в сантиметрах; 0 — вплотную к углам. */
+    paddingCm: number;
     showPhotos: boolean;
     showBeanPrices: boolean;
     showTrends: boolean;
@@ -145,7 +166,7 @@ export function makeId(prefix: string): string {
 
 export function emptySection(
   title = 'Новая секция',
-  rect: TvGridRect = { x: 0, y: 0, w: GRID_COLUMNS, h: 4 },
+  rect: TvGridRect = { x: 0, y: 0, w: GRID_COLUMNS, h: Math.round(GRID_ROWS / 3) },
   kind: TvSectionKind = 'drinks',
 ): TvMenuSection {
   return {
@@ -158,7 +179,8 @@ export function emptySection(
     display: 'cards',
     columns: null,
     items: [],
-    showChart: false,
+    chartDrinkId: '',
+    chartVolume: '',
     mediaUrl: '',
     mediaType: 'image',
     mediaFit: 'cover',
@@ -175,6 +197,7 @@ export function defaultBoard(name = 'Основное меню'): TvBoardConfig 
     id: makeId('board'),
     name,
     header: {
+      enabled: true,
       title: 'Coffee',
       accentWord: 'Exchange',
       subtitle: 'Меню',
@@ -184,9 +207,11 @@ export function defaultBoard(name = 'Основное меню'): TvBoardConfig 
       showRefreshBanner: false,
     },
     layout: {
+      orientation: 'landscape',
       density: 'compact',
       fontScale: 1,
       screenDiagonalCm: REFERENCE_DIAGONAL_CM,
+      paddingCm: 1,
       showPhotos: true,
       showBeanPrices: false,
       showTrends: false,
@@ -247,20 +272,27 @@ function normalizeItem(raw: unknown): TvMenuItemRef | null {
   return { drinkId, volumes };
 }
 
-function normalizeRect(raw: unknown, fallbackY: number): TvGridRect {
+function normalizeRect(raw: unknown, fallbackY: number, gridScale = 1): TvGridRect {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-  const x = num(o.x, 0, 0, GRID_COLUMNS - 1);
-  const y = num(o.y, fallbackY, 0, GRID_ROWS - 1);
+  const scale = (value: unknown) =>
+    typeof value === 'number' && Number.isFinite(value) ? value * gridScale : value;
+
+  const x = num(scale(o.x), 0, 0, GRID_COLUMNS - 1);
+  const y = num(scale(o.y), fallbackY, 0, GRID_ROWS - 1);
   // Размер ограничиваем остатком сетки, иначе секция вылезет за пределы экрана.
   return {
     x,
     y,
-    w: num(o.w, GRID_COLUMNS - x, 1, GRID_COLUMNS - x),
-    h: num(o.h, Math.min(4, GRID_ROWS - y), 1, GRID_ROWS - y),
+    w: num(scale(o.w), GRID_COLUMNS - x, 1, GRID_COLUMNS - x),
+    h: num(scale(o.h), Math.min(GRID_ROWS / 3, GRID_ROWS - y), 1, GRID_ROWS - y),
   };
 }
 
-function normalizeSection(raw: unknown, index: number): TvMenuSection {
+function normalizeSection(
+  raw: unknown,
+  index: number,
+  gridScale: number,
+): TvMenuSection {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const base = emptySection('Секция');
 
@@ -269,12 +301,14 @@ function normalizeSection(raw: unknown, index: number): TvMenuSection {
   const mediaType = o.mediaType;
   const mediaFit = o.mediaFit;
   const columnsRaw = o.columns;
+  const rowStep = Math.round(GRID_ROWS / 3);
 
   return {
     id: str(o.id, makeId('sec')),
-    kind: kind === 'media' || kind === 'text' ? kind : 'drinks',
+    kind:
+      kind === 'media' || kind === 'text' || kind === 'chart' ? kind : 'drinks',
     title: str(o.title, base.title),
-    rect: normalizeRect(o.rect, Math.min(GRID_ROWS - 1, index * 4)),
+    rect: normalizeRect(o.rect, Math.min(GRID_ROWS - 1, index * rowStep), gridScale),
     background: isHexColor(o.background) ? o.background : null,
     showFrame: bool(o.showFrame, base.showFrame),
     display:
@@ -283,7 +317,8 @@ function normalizeSection(raw: unknown, index: number): TvMenuSection {
     items: Array.isArray(o.items)
       ? o.items.map(normalizeItem).filter((i): i is TvMenuItemRef => i !== null)
       : [],
-    showChart: bool(o.showChart, base.showChart),
+    chartDrinkId: str(o.chartDrinkId, ''),
+    chartVolume: str(o.chartVolume, ''),
     mediaUrl: str(o.mediaUrl, ''),
     mediaType: mediaType === 'video' ? 'video' : 'image',
     mediaFit: mediaFit === 'contain' ? 'contain' : 'cover',
@@ -291,18 +326,22 @@ function normalizeSection(raw: unknown, index: number): TvMenuSection {
   };
 }
 
-function normalizeScreen(raw: unknown): TvMenuScreen {
+function normalizeScreen(raw: unknown, gridScale: number): TvMenuScreen {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   return {
     id: str(o.id, makeId('scr')),
     title: str(o.title, 'Экран'),
     sections: Array.isArray(o.sections)
-      ? o.sections.map((s, i) => normalizeSection(s, i))
+      ? o.sections.map((s, i) => normalizeSection(s, i, gridScale))
       : [],
   };
 }
 
-export function normalizeBoard(raw: unknown): TvBoardConfig {
+/**
+ * @param gridScale множитель координат сетки при переходе на более мелкий шаг
+ *   (конфиги v2 хранили раскладку в сетке 12×12).
+ */
+export function normalizeBoard(raw: unknown, gridScale = 1): TvBoardConfig {
   const d = defaultBoard();
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
 
@@ -318,6 +357,7 @@ export function normalizeBoard(raw: unknown): TvBoardConfig {
     id: str(o.id, d.id),
     name: str(o.name, d.name),
     header: {
+      enabled: bool(header.enabled, d.header.enabled),
       title: str(header.title, d.header.title),
       accentWord: str(header.accentWord, d.header.accentWord),
       subtitle: str(header.subtitle, d.header.subtitle),
@@ -327,6 +367,7 @@ export function normalizeBoard(raw: unknown): TvBoardConfig {
       showRefreshBanner: bool(header.showRefreshBanner, d.header.showRefreshBanner),
     },
     layout: {
+      orientation: layout.orientation === 'portrait' ? 'portrait' : 'landscape',
       density:
         density === 'compact' || density === 'normal' || density === 'spacious'
           ? density
@@ -338,6 +379,7 @@ export function normalizeBoard(raw: unknown): TvBoardConfig {
         40,
         400,
       ),
+      paddingCm: num(layout.paddingCm, d.layout.paddingCm, 0, 6),
       showPhotos: bool(layout.showPhotos, d.layout.showPhotos),
       showBeanPrices: bool(layout.showBeanPrices, d.layout.showBeanPrices),
       showTrends: bool(layout.showTrends, d.layout.showTrends),
@@ -359,7 +401,9 @@ export function normalizeBoard(raw: unknown): TvBoardConfig {
       enabled: bool(rotation.enabled, d.rotation.enabled),
       intervalSec: num(rotation.intervalSec, d.rotation.intervalSec, 5, 600),
     },
-    screens: Array.isArray(o.screens) ? o.screens.map(normalizeScreen) : [],
+    screens: Array.isArray(o.screens)
+      ? o.screens.map((s) => normalizeScreen(s, gridScale))
+      : [],
     footer: str(o.footer, d.footer),
   };
 }
@@ -380,7 +424,8 @@ function migrateV1(raw: Record<string, unknown>): TvMenuDocument {
     return {
       ...screen,
       sections: screen.sections.map((section) => {
-        const h = Math.max(2, Math.min(GRID_ROWS - y, Math.ceil(section.items.length / legacyColumns) * 2 + 1));
+        const rows = Math.ceil(section.items.length / legacyColumns) * 4 + 2;
+        const h = Math.max(4, Math.min(GRID_ROWS - y, rows));
         const rect: TvGridRect = { x: 0, y, w: GRID_COLUMNS, h };
         y = Math.min(GRID_ROWS - 1, y + h);
         return { ...section, columns: legacyColumns, rect };
@@ -406,7 +451,12 @@ export function normalizeTvMenuDocument(raw: unknown): TvMenuDocument {
     return migrateV1(o);
   }
 
-  const boards = o.boards.map(normalizeBoard);
+  // v2 хранил раскладку в сетке 12×12: координаты растягиваем под новый шаг,
+  // чтобы уже собранные экраны выглядели так же.
+  const version = num(o.version, TV_MENU_CONFIG_VERSION, 1, 99);
+  const gridScale = version < 3 ? GRID_COLUMNS / 12 : 1;
+
+  const boards = o.boards.map((b) => normalizeBoard(b, gridScale));
   return {
     version: TV_MENU_CONFIG_VERSION,
     updatedAt: str(o.updatedAt, d.updatedAt),
