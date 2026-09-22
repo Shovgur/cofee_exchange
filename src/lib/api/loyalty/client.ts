@@ -53,7 +53,9 @@ export function loyaltyErrorMessage(err: unknown, fallback: string): string {
 export function buildLoyaltyPath(pathAfterV1: string): string {
   const path = pathAfterV1.replace(/^\//, '');
   const isBrowser = typeof window !== 'undefined';
-  const useProxy = process.env.NEXT_PUBLIC_LOYALTY_USE_PROXY === 'true';
+  const useProxy =
+    process.env.NEXT_PUBLIC_LOYALTY_USE_PROXY === 'true' ||
+    (isBrowser && process.env.NEXT_PUBLIC_LOYALTY_USE_PROXY !== 'false');
 
   if (isBrowser && useProxy) {
     return `/api/loyalty-proxy/${path}`;

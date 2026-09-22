@@ -40,17 +40,26 @@ function workingHoursToUi(hours: StoreWorkingHours | null): WorkHours[] {
   });
 }
 
+function parseCoord(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(String(value).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
 export function mapApiStoreToCoffeeShop(store: ApiStore): CoffeeShop | null {
-  if (store.latitude == null || store.longitude == null) return null;
+  const lat = parseCoord(store.latitude);
+  const lng = parseCoord(store.longitude);
+  if (lat == null || lng == null) return null;
+  const photos = store.photos ?? [];
   return {
     id: store.id,
     name: store.name || 'Кофейня',
     address: store.address ?? '',
-    lat: store.latitude,
-    lng: store.longitude,
+    lat,
+    lng,
     workHours: workingHoursToUi(store.working_hours),
-    countryId: store.country_code,
+    countryId: store.country_code ?? 'RU',
     rating: 4.8,
-    photoUrl: store.photos[0] ?? undefined,
+    photoUrl: photos[0] ?? undefined,
   };
 }

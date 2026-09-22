@@ -11,6 +11,9 @@ import {
   type StoreWorkingHours,
 } from '@/lib/api/loyalty/stores';
 import { loyaltyUploadMedia } from '@/lib/api/loyalty/client';
+import WorkingHoursEditor, { normalizeWorkingHours } from '@/components/admin/stores/WorkingHoursEditor';
+import AddressSuggestInput from '@/components/admin/stores/AddressSuggestInput';
+import { geocodeAddress } from '@/lib/geocode';
 
 export default function AdminStorePage({ params }: { params: { storeId: string } }) {
   const { storeId } = params;
@@ -26,7 +29,7 @@ export default function AdminStorePage({ params }: { params: { storeId: string }
   const [phone, setPhone] = useState('');
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
-  const [hoursJson, setHoursJson] = useState('{}');
+  const [workingHours, setWorkingHours] = useState<StoreWorkingHours>({});
   const [photos, setPhotos] = useState<string[]>([]);
   const [isPublished, setIsPublished] = useState(false);
   const [isActive, setIsActive] = useState(true);
@@ -42,7 +45,7 @@ export default function AdminStorePage({ params }: { params: { storeId: string }
       setPhone(s.phone ?? '');
       setLat(s.latitude != null ? String(s.latitude) : '');
       setLng(s.longitude != null ? String(s.longitude) : '');
-      setHoursJson(JSON.stringify(s.working_hours ?? {}, null, 2));
+      setWorkingHours(normalizeWorkingHours(s.working_hours));
       setPhotos(s.photos ?? []);
       setIsPublished(s.is_published);
       setIsActive(s.is_active);
@@ -56,25 +59,35 @@ export default function AdminStorePage({ params }: { params: { storeId: string }
   useEffect(() => { void load(); }, [load]);
 
   const handleSave = async () => {
-    let working_hours: StoreWorkingHours;
-    try {
-      working_hours = JSON.parse(hoursJson) as StoreWorkingHours;
-    } catch {
-      setError('График работы: некорректный JSON');
-      return;
-    }
-
     setSaving(true);
     setError(null);
     try {
+      let latitude = lat ? Number(lat) : undefined;
+      let longitude = lng ? Number(lng) : undefined;
+      if ((latitude == null || longitude == null) && address.trim()) {
+        const geo = await geocodeAddress(address.trim());
+        if (geo) {
+          latitude = geo.lat;
+          longitude = geo.lng;
+          setLat(String(geo.lat));
+          setLng(String(geo.lng));
+        } else if (isPublished) {
+          setError(
+            'Не удалось определить координаты по адресу. Выберите адрес из подсказок или укажите широту и долготу — без них кофейня не появится на карте.',
+          );
+          setSaving(false);
+          return;
+        }
+      }
+
       const updated = await adminPatchStore(storeId, {
         name,
         description,
         address,
         phone,
-        latitude: lat ? Number(lat) : undefined,
-        longitude: lng ? Number(lng) : undefined,
-        working_hours,
+        latitude,
+        longitude,
+        working_hours: workingHours,
         photos,
         is_published: isPublished,
         is_active: isActive,
@@ -131,25 +144,27 @@ export default function AdminStorePage({ params }: { params: { storeId: string }
       <div className="rounded-2xl border border-border bg-surface p-6 space-y-4">
         <Field label="Название" value={name} onChange={setName} />
         <Field label="Описание" value={description} onChange={setDescription} multiline />
-        <Field label="Адрес" value={address} onChange={setAddress} />
+        <AddressSuggestInput
+          value={address}
+          onChange={setAddress}
+          onPick={(pick) => {
+            setAddress(pick.label);
+            setLat(String(pick.lat));
+            setLng(String(pick.lng));
+          }}
+        />
         <Field label="Телефон" value={phone} onChange={setPhone} />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Широта" value={lat} onChange={setLat} />
           <Field label="Долгота" value={lng} onChange={setLng} />
         </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">График (JSON)</label>
-          <p className="text-xs text-muted mb-2">
-            Ключи mon…sun, время HH:MM, null — выходной
+        {!lat || !lng ? (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            Без координат точка не отображается на карте в приложении. Выберите адрес из подсказок.
           </p>
-          <textarea
-            value={hoursJson}
-            onChange={(e) => setHoursJson(e.target.value)}
-            rows={8}
-            className="w-full font-mono text-xs rounded-xl border border-border bg-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange/40"
-          />
-        </div>
+        ) : null}
+
+        <WorkingHoursEditor value={workingHours} onChange={setWorkingHours} />
 
         <div>
           <label className="block text-sm font-medium mb-2">Фото</label>

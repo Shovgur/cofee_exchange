@@ -109,6 +109,11 @@ export default function AdminStoresPage() {
                 >
                   {s.is_published ? 'В приложении' : 'Черновик'}
                 </span>
+                {s.latitude == null || s.longitude == null ? (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">
+                    Нет на карте
+                  </span>
+                ) : null}
                 {!s.is_active && (
                   <span className="text-danger">Неактивна</span>
                 )}

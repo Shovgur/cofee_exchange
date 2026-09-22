@@ -12,11 +12,11 @@ export interface ApiStore {
   name: string;
   description: string | null;
   address: string | null;
-  latitude: number | null;
-  longitude: number | null;
+  latitude: number | string | null;
+  longitude: number | string | null;
   working_hours: StoreWorkingHours | null;
   phone: string | null;
-  photos: string[];
+  photos: string[] | null;
 }
 
 export interface AdminStore extends ApiStore {
