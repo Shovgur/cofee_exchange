@@ -9,6 +9,7 @@ import {
   adminPublishRules,
   type ProgramSettingsOut,
 } from '@/lib/api/loyalty/admin';
+import { loyaltyUploadMedia } from '@/lib/api/loyalty/client';
 import { fetchCountries } from '@/lib/api/loyalty/catalog';
 import type { ApiCountry } from '@/lib/api/loyalty/types';
 import { useToast } from '@/hooks/useToast';
@@ -98,6 +99,8 @@ export default function AdminLoyaltySettingsPage() {
   const [rulesCountry, setRulesCountry] = useState('');
   const [rulesText, setRulesText] = useState('');
   const [rulesSaving, setRulesSaving] = useState(false);
+  const [rulesPdfUrl, setRulesPdfUrl] = useState('');
+  const [rulesPdfUploading, setRulesPdfUploading] = useState(false);
 
   // Track whether a default country has been set so we only do it once
   const rulesCountrySetRef = useRef(false);
@@ -131,11 +134,18 @@ export default function AdminLoyaltySettingsPage() {
   }, []);
 
   const handlePublishRules = async () => {
-    if (!rulesCountry || !rulesText.trim()) return;
+    const text = rulesText.trim();
+    const pdf = rulesPdfUrl.trim();
+    if (!rulesCountry || (!text && !pdf)) return;
     setRulesSaving(true);
     try {
-      await adminPublishRules({ country_code: rulesCountry, text: rulesText.trim() });
+      await adminPublishRules({
+        country_code: rulesCountry,
+        text: text || undefined,
+        pdf_url: pdf || undefined,
+      });
       setRulesText('');
+      setRulesPdfUrl('');
       showToast('Правила опубликованы', true);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Ошибка публикации', false);
@@ -284,10 +294,36 @@ export default function AdminLoyaltySettingsPage() {
                 className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange/40 resize-y"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">PDF правил</label>
+              <p className="text-xs text-muted mb-2">Загрузите PDF или вставьте URL после загрузки</p>
+              <input
+                value={rulesPdfUrl}
+                onChange={(e) => setRulesPdfUrl(e.target.value)}
+                placeholder="https://…/rules.pdf"
+                className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm mb-2"
+              />
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-orange">
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setRulesPdfUploading(true);
+                    void loyaltyUploadMedia('rules', f)
+                      .then((out) => setRulesPdfUrl(out.url))
+                      .finally(() => setRulesPdfUploading(false));
+                  }}
+                />
+                {rulesPdfUploading ? 'Загрузка…' : 'Загрузить PDF'}
+              </label>
+            </div>
             <Button
               fullWidth
               onClick={handlePublishRules}
-              disabled={!rulesText.trim() || !rulesCountry}
+              disabled={(!rulesText.trim() && !rulesPdfUrl.trim()) || !rulesCountry}
               loading={rulesSaving}
             >
               {!rulesSaving && <FileText size={16} />}

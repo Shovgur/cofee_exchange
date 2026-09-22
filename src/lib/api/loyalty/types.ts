@@ -45,6 +45,7 @@ export interface ApiRules {
   country_code: string;
   version: number;
   text: string;
+  pdf_url?: string | null;
   created_at: string;
 }
 
@@ -59,6 +60,13 @@ export interface ApiMenuItem {
   base_price: string;
   dynamic_price: string;
   price_beans: number | null;
+  description?: string | null;
+  image_url?: string | null;
+  calories?: number | null;
+  protein?: number | null;
+  fat?: number | null;
+  carbs?: number | null;
+  is_active?: boolean;
 }
 
 export interface ApiMenuModifier {

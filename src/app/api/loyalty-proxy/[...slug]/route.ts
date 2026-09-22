@@ -26,16 +26,23 @@ async function proxy(request: NextRequest, slug: string[]): Promise<NextResponse
 
   const init: RequestInit = { method, headers, cache: 'no-store' };
   if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
-    init.body = await request.text();
+    // multipart и бинарные тела нельзя читать как text()
+    init.body = await request.arrayBuffer();
   }
 
   const res = await fetch(target, init);
-  const body = await res.text();
+  const resCt = res.headers.get('Content-Type') ?? '';
+  const isJson =
+    resCt.includes('application/json') || resCt.includes('text/');
+  const body = isJson ? await res.text() : await res.arrayBuffer();
   const outHeaders = new Headers();
   const ct = res.headers.get('Content-Type');
   if (ct) outHeaders.set('Content-Type', ct);
   const retryAfter = res.headers.get('Retry-After');
   if (retryAfter) outHeaders.set('Retry-After', retryAfter);
+  const contentDisposition = res.headers.get('Content-Disposition');
+  if (contentDisposition) outHeaders.set('Content-Disposition', contentDisposition);
+
   return new NextResponse(body, { status: res.status, headers: outHeaders });
 }
 
@@ -54,6 +61,20 @@ export async function POST(
 }
 
 export async function PATCH(
+  request: NextRequest,
+  context: { params: { slug: string[] } },
+) {
+  return proxy(request, context.params.slug);
+}
+
+export async function PUT(
+  request: NextRequest,
+  context: { params: { slug: string[] } },
+) {
+  return proxy(request, context.params.slug);
+}
+
+export async function DELETE(
   request: NextRequest,
   context: { params: { slug: string[] } },
 ) {

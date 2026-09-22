@@ -15,6 +15,10 @@ import {
   Coffee,
   Ticket,
   Monitor,
+  MapPin,
+  BarChart3,
+  MessageSquare,
+  ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +31,8 @@ const SECTION_NAV = [
   { href: '/admin/drinks', icon: GlassWater, label: 'Напитки', exact: false },
   { href: '/admin/sales', icon: ShoppingCart, label: 'Продажи', exact: false },
   { href: '/admin/tv-menu', icon: Monitor, label: 'ТВ-меню', exact: false },
+  { href: '/admin/stores', icon: MapPin, label: 'Кофейни', exact: false },
+  { href: '/admin/analytics', icon: BarChart3, label: 'Статистика', exact: false },
 ] as const;
 
 const LOYALTY_NAV = [
@@ -35,6 +41,8 @@ const LOYALTY_NAV = [
   { href: '/admin/loyalty/settings', icon: Award, label: 'Программа лояльности', exact: false },
   { href: '/admin/loyalty/bean-prices', icon: Coffee, label: 'Цены в Бинах', exact: false },
   { href: '/admin/loyalty/alerts', icon: ShieldAlert, label: 'Алерты', exact: false },
+  { href: '/admin/loyalty/support', icon: MessageSquare, label: 'Обратная связь', exact: false },
+  { href: '/admin/loyalty/menu', icon: ImageIcon, label: 'Контент меню', exact: false },
 ] as const;
 
 function accountNavLabel(name: string | undefined): string {

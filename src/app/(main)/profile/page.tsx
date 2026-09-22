@@ -453,7 +453,7 @@ export default function ProfilePage() {
               </div>
               {[
                 { icon: FileText, label: 'Правила программы', onClick: () => setShowRules(true), disabled: false },
-                { icon: HelpCircle, label: 'Поддержка', disabled: true },
+                { icon: HelpCircle, label: 'Поддержка', onClick: () => router.push('/support'), disabled: false },
                 { icon: Info, label: 'О приложении', disabled: true },
                 { icon: Settings, label: 'Настройки', disabled: true },
               ].map(({ icon: Icon, label, onClick, disabled }) => (

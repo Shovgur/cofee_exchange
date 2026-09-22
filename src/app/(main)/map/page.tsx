@@ -2,9 +2,10 @@
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X, Navigation, Clock, Star, MapPin, Search } from "lucide-react";
-import { getAllShops, isShopOpen } from "@/lib/shops";
+import { fetchShops, isShopOpen } from "@/lib/shops";
+import { useCountry } from "@/contexts/CountryContext";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import type { CoffeeShop } from "@/types";
@@ -95,7 +96,22 @@ function ShopCard({
 const DEFAULT_CENTER: [number, number] = [55.757, 37.617];
 
 export default function MapPage() {
-  const shops = useMemo(() => getAllShops(), []);
+  const { country } = useCountry();
+  const [shops, setShops] = useState<CoffeeShop[]>([]);
+  const [shopsLoading, setShopsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setShopsLoading(true);
+    void fetchShops(country.id).then((list) => {
+      if (!cancelled) {
+        setShops(list);
+        setShopsLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [country.id]);
+
   const [selected, setSelected] = useState<CoffeeShop | null>(null);
   const [search, setSearch] = useState("");
 
@@ -147,9 +163,12 @@ export default function MapPage() {
               onClick={() => setSelected(shop)}
             />
           ))}
-          {filteredShops.length === 0 && (
+          {shopsLoading && (
+            <p className="text-center text-muted text-sm py-8">Загрузка…</p>
+          )}
+          {!shopsLoading && filteredShops.length === 0 && (
             <p className="text-center text-muted text-sm py-8">
-              Ничего не найдено
+              {shops.length === 0 ? 'Пока нет опубликованных кофеен' : 'Ничего не найдено'}
             </p>
           )}
         </div>

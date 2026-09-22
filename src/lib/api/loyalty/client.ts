@@ -170,3 +170,60 @@ export function loyaltyJson(body: unknown): Pick<RequestInit, 'body' | 'headers'
     headers: { 'Content-Type': 'application/json' },
   };
 }
+
+export type AdminMediaKind = 'drinks' | 'stores' | 'rules' | 'plugin';
+
+export interface AdminMediaUploadOut {
+  url: string;
+  content_type: string;
+  size: number;
+  filename: string;
+}
+
+/** Загрузка файла в хранилище лояльности (фото, PDF, плагин). */
+export async function loyaltyUploadMedia(
+  kind: AdminMediaKind,
+  file: File,
+): Promise<AdminMediaUploadOut> {
+  const tokens = getStoredTokens();
+  const form = new FormData();
+  form.append('file', file);
+
+  const url = buildLoyaltyPath(`admin/media?kind=${encodeURIComponent(kind)}`);
+  const headers: HeadersInit = { Accept: 'application/json' };
+  if (tokens?.access_token) {
+    headers.Authorization = `Bearer ${tokens.access_token}`;
+  }
+
+  const res = await fetch(url, { method: 'POST', headers, body: form, cache: 'no-store' });
+  if (!res.ok) throw await parseError(res);
+  return (await res.json()) as AdminMediaUploadOut;
+}
+
+/** Скачивание Excel-выгрузки или другого бинарного ответа. */
+export async function loyaltyDownload(
+  pathAfterV1: string,
+  params: Record<string, string | number | boolean | undefined | null> = {},
+): Promise<{ blob: Blob; filename: string }> {
+  const q = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value == null || value === '') continue;
+    q.set(key, String(value));
+  }
+  const qs = q.toString();
+  const tokens = getStoredTokens();
+  const headers: HeadersInit = {};
+  if (tokens?.access_token) {
+    headers.Authorization = `Bearer ${tokens.access_token}`;
+  }
+
+  const url = buildLoyaltyPath(`${pathAfterV1.replace(/^\//, '')}${qs ? `?${qs}` : ''}`);
+  const res = await fetch(url, { headers, cache: 'no-store' });
+  if (!res.ok) throw await parseError(res);
+
+  const blob = await res.blob();
+  const cd = res.headers.get('Content-Disposition') ?? '';
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(cd);
+  const filename = match?.[1]?.trim() || 'export.xlsx';
+  return { blob, filename };
+}

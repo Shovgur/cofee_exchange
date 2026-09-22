@@ -21,6 +21,16 @@ export async function fetchMenu(country: string): Promise<ApiMenuItem[]> {
   return loyaltyFetch<ApiMenuItem[]>(`menu?country=${encodeURIComponent(country)}`);
 }
 
+export interface ApiTopMenuItem extends ApiMenuItem {
+  rank: number;
+}
+
+export async function fetchTopDrinks(country: string, limit = 10): Promise<ApiTopMenuItem[]> {
+  return loyaltyFetch<ApiTopMenuItem[]>(
+    `menu/top-drinks?country=${encodeURIComponent(country)}&limit=${limit}`,
+  );
+}
+
 export async function fetchMenuItem(itemId: string): Promise<ApiMenuItemDetail> {
   return loyaltyFetch<ApiMenuItemDetail>(`menu/items/${encodeURIComponent(itemId)}`);
 }

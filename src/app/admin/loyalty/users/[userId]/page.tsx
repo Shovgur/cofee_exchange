@@ -24,6 +24,7 @@ import {
   Pencil,
   GiftIcon,
   Users2,
+  Bell,
 } from 'lucide-react';
 import {
   adminGetUser,
@@ -37,6 +38,7 @@ import {
   adminCancelCoupon,
   adminUpdateUser,
   adminIssueCoupon,
+  adminSendUserNotification,
   type AdminUserCardOut,
   type AuthEventOut,
 } from '@/lib/api/loyalty/admin';
@@ -585,6 +587,10 @@ export default function AdminUserPage({ params }: { params: { userId: string } }
   const [blockMode, setBlockMode] = useState<'block' | 'unblock' | null>(null);
   const [blockLoading, setBlockLoading] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showNotify, setShowNotify] = useState(false);
+  const [notifyTitle, setNotifyTitle] = useState('');
+  const [notifyBody, setNotifyBody] = useState('');
+  const [notifyLoading, setNotifyLoading] = useState(false);
   const [showIssue, setShowIssue] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<ApiCoupon | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -782,6 +788,13 @@ export default function AdminUserPage({ params }: { params: { userId: string } }
               <Pencil size={16} /> Редактировать
             </Button>
             <Button
+              variant="secondary"
+              onClick={() => setShowNotify(true)}
+              className="flex items-center gap-2"
+            >
+              <Bell size={16} /> Уведомление
+            </Button>
+            <Button
               variant={user.is_blocked ? 'secondary' : 'danger'}
               onClick={() => setBlockMode(user.is_blocked ? 'unblock' : 'block')}
               className="flex items-center gap-2"
@@ -968,6 +981,48 @@ export default function AdminUserPage({ params }: { params: { userId: string } }
         user={user}
         onSaved={(updated) => { setUser(updated); showToast('Профиль обновлён', true); }}
       />
+
+      <Modal open={showNotify} onClose={() => setShowNotify(false)} title="Уведомление пользователю">
+        <div className="space-y-3">
+          <p className="text-xs text-muted">Попадёт в ленту приложения и в push (если настроен FCM).</p>
+          <input
+            value={notifyTitle}
+            onChange={(e) => setNotifyTitle(e.target.value)}
+            placeholder="Заголовок"
+            className="w-full rounded-xl border border-border px-4 py-2.5 text-sm"
+          />
+          <textarea
+            value={notifyBody}
+            onChange={(e) => setNotifyBody(e.target.value)}
+            rows={4}
+            placeholder="Текст"
+            className="w-full rounded-xl border border-border px-4 py-2.5 text-sm"
+          />
+          <Button
+            fullWidth
+            disabled={notifyLoading || !notifyTitle.trim() || !notifyBody.trim()}
+            onClick={async () => {
+              setNotifyLoading(true);
+              try {
+                await adminSendUserNotification(userId, {
+                  title: notifyTitle.trim(),
+                  body: notifyBody.trim(),
+                });
+                setShowNotify(false);
+                setNotifyTitle('');
+                setNotifyBody('');
+                showToast('Уведомление отправлено', true);
+              } catch (e) {
+                showToast(e instanceof Error ? e.message : 'Ошибка', false);
+              } finally {
+                setNotifyLoading(false);
+              }
+            }}
+          >
+            Отправить
+          </Button>
+        </div>
+      </Modal>
 
       <IssueCouponModal
         open={showIssue}

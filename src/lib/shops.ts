@@ -1,6 +1,20 @@
+import { fetchStores } from '@/lib/api/loyalty/stores';
+import { mapApiStoreToCoffeeShop } from '@/lib/stores-mapper';
 import type { CoffeeShop } from '@/types';
 
-/** Пока нет эндпоинта кофеен в API лояльности — список пустой. */
+/** Загружает опубликованные кофейни с API лояльности. */
+export async function fetchShops(countryCode?: string): Promise<CoffeeShop[]> {
+  try {
+    const stores = await fetchStores(countryCode);
+    return stores
+      .map(mapApiStoreToCoffeeShop)
+      .filter((s): s is CoffeeShop => s !== null);
+  } catch {
+    return [];
+  }
+}
+
+/** @deprecated Синхронный список пуст — используйте fetchShops. */
 export function getAllShops(): CoffeeShop[] {
   return [];
 }

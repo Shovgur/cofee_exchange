@@ -369,11 +369,20 @@ export async function adminSetModifierBeanPrice(
 
 export async function adminPublishRules(body: {
   country_code: string;
+  text?: string;
+  pdf_url?: string;
+}): Promise<{
+  country_code: string;
+  version: number;
   text: string;
-}): Promise<{ country_code: string; version: number; text: string; created_at: string }> {
+  pdf_url?: string | null;
+  created_at: string;
+}> {
   return loyaltyFetch('admin/rules', {
     method: 'POST',
     auth: true,
     ...loyaltyJson(body),
   });
 }
+
+export { adminSendUserNotification, adminBroadcastNotification } from '@/lib/api/loyalty/notifications';
