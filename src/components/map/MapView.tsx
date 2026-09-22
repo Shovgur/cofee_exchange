@@ -6,16 +6,13 @@ import type { Map as LeafletMap } from 'leaflet';
 import type { CoffeeShop } from '@/types';
 
 import 'leaflet/dist/leaflet.css';
+import { getMapTileConfig } from '@/lib/map-tiles';
 
 interface Props {
   shops: CoffeeShop[];
   onShopClick: (shop: CoffeeShop) => void;
   center: [number, number];
 }
-
-/* Светлая подложка OSM (Carto) под кремовую тему приложения */
-const CARTO_LIGHT =
-  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
 export default function MapView({ shops, onShopClick, center }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -123,7 +120,7 @@ export default function MapView({ shops, onShopClick, center }: Props) {
         center,
         zoom: 12,
         zoomControl: true,
-        attributionControl: false,
+        attributionControl: true,
       });
 
       if (cancelled) {
@@ -142,11 +139,8 @@ export default function MapView({ shops, onShopClick, center }: Props) {
       resizeObserver = new ResizeObserver(scheduleInvalidate);
       resizeObserver.observe(el);
 
-      L.tileLayer(CARTO_LIGHT, {
-        subdomains: 'abcd',
-        attribution: '',
-        maxZoom: 19,
-      }).addTo(map);
+      const { url: tileUrl, options: tileOptions } = getMapTileConfig();
+      L.tileLayer(tileUrl, tileOptions).addTo(map);
 
       const orangeIcon = L.divIcon({
         className: '',

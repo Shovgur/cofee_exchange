@@ -170,7 +170,13 @@
 }
 
 .leaflet-container .leaflet-control-attribution {
-  display: none !important;
+  font-size: 9px !important;
+  line-height: 1.2 !important;
+  max-width: min(70vw, 14rem) !important;
+  padding: 2px 6px !important;
+  opacity: 0.75;
+  background: rgb(232 211 191 / 0.92) !important;
+  color: #2f241c !important;
 }
 
 /* Цветовые вспышки при обновлении цены — отдельный объём */
