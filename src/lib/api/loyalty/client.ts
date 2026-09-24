@@ -93,6 +93,21 @@ export function clearStoredTokens(): void {
 
 let refreshPromise: Promise<ApiTokenPair | null> | null = null;
 
+/** Одно обновление access-токена на всё приложение (Loyalty + Pricing). */
+export async function refreshStoredAccessToken(): Promise<ApiTokenPair | null> {
+  const tokens = getStoredTokens();
+  if (!tokens?.refresh_token) {
+    clearStoredTokens();
+    return null;
+  }
+  if (!refreshPromise) {
+    refreshPromise = refreshTokens(tokens.refresh_token).finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
 async function parseError(res: Response): Promise<LoyaltyApiError> {
   const retryAfterSeconds = parseRetryAfter(res.headers.get('Retry-After'));
   const raw = await res.text().catch(() => '');
@@ -149,12 +164,7 @@ export async function loyaltyFetch<T>(
   let res = await fetch(url, { ...rest, headers, cache: 'no-store' });
 
   if (auth && res.status === 401 && tokens?.refresh_token) {
-    if (!refreshPromise) {
-      refreshPromise = refreshTokens(tokens.refresh_token).finally(() => {
-        refreshPromise = null;
-      });
-    }
-    const refreshed = await refreshPromise;
+    const refreshed = await refreshStoredAccessToken();
     if (refreshed?.access_token) {
       headers.set('Authorization', `Bearer ${refreshed.access_token}`);
       res = await fetch(url, { ...rest, headers, cache: 'no-store' });

@@ -32,6 +32,8 @@ async function proxy(request: NextRequest, slug: string[]): Promise<NextResponse
   const headers: HeadersInit = {
     Accept: request.headers.get('Accept') ?? 'application/json',
   };
+  const auth = request.headers.get('Authorization');
+  if (auth) headers['Authorization'] = auth;
   const method = request.method;
   if (method !== 'GET' && method !== 'HEAD') {
     const ct = request.headers.get('Content-Type');

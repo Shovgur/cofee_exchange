@@ -208,6 +208,11 @@ export default function AdminSalesTestPage() {
 
   return (
     <div className="p-8">
+      <div className="mb-6 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        Служебный раздел для теста движка цен. После обновления касс API потребует{' '}
+        <code className="text-xs">X-POS-Token</code> — из браузера это небезопасно; если
+        регистрация продаж нужна в работе, согласуйте с бэкендом отдельную админ-ручку.
+      </div>
       <div className="mb-8 flex max-w-3xl items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange/15">
