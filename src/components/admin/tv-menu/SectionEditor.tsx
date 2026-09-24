@@ -15,7 +15,14 @@ import {
   GRID_ROWS,
   type TvMenuSection,
 } from '@/lib/tv-menu/config';
-import { Field, Segmented, TextInput, Toggle, ColorPicker } from '@/components/admin/tv-menu/controls';
+import {
+  Field,
+  Segmented,
+  Slider,
+  TextInput,
+  Toggle,
+  ColorPicker,
+} from '@/components/admin/tv-menu/controls';
 
 const SECTION_BG_PRESETS = ['#1E1814', '#2A221C', '#3A2F27', '#FFFFFF', '#F7EFE6'];
 
@@ -417,6 +424,30 @@ export default function SectionEditor({
 
       {/* Оформление секции */}
       <div className="mt-3 space-y-3 border-t border-border pt-3">
+        <Toggle
+          label="Свой размер шрифта в блоке"
+          checked={section.fontScale != null}
+          onChange={(v) =>
+            onPatch((s) => ({
+              ...s,
+              fontScale: v ? (s.fontScale ?? 1) : null,
+            }))
+          }
+        />
+        {section.fontScale != null && (
+          <Field
+            label={`Шрифт блока · ${Math.round(section.fontScale * 100)}%`}
+            hint="Не зависит от общего «Масштаба содержимого» доски, пока включён свой размер."
+          >
+            <Slider
+              value={Math.round(section.fontScale * 100)}
+              min={40}
+              max={200}
+              step={5}
+              onChange={(v) => onPatch((s) => ({ ...s, fontScale: v / 100 }))}
+            />
+          </Field>
+        )}
         <Toggle
           label="Рамка и фон секции"
           checked={section.showFrame}

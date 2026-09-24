@@ -92,6 +92,9 @@ export interface TvMenuSection {
 
   // kind: 'text'
   text: string;
+
+  /** null — как «Масштаб содержимого» у всей доски. */
+  fontScale: number | null;
 }
 
 export interface TvMenuScreen {
@@ -185,6 +188,7 @@ export function emptySection(
     mediaType: 'image',
     mediaFit: 'cover',
     text: '',
+    fontScale: null,
   };
 }
 
@@ -323,6 +327,7 @@ function normalizeSection(
     mediaType: mediaType === 'video' ? 'video' : 'image',
     mediaFit: mediaFit === 'contain' ? 'contain' : 'cover',
     text: str(o.text, ''),
+    fontScale: o.fontScale == null ? null : num(o.fontScale, 1, 0.4, 2),
   };
 }
 

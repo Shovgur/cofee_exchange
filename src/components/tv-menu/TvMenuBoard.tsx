@@ -139,8 +139,9 @@ function PriceCell({
   withLabel: boolean;
 }) {
   const { layout } = board;
+  const percentRounded = Math.round(volume.change);
   return (
-    <span className="inline-flex items-baseline gap-[0.35em] whitespace-nowrap">
+    <span className="inline-flex items-baseline justify-end gap-[0.35em] whitespace-nowrap">
       {withLabel && (
         <span style={{ color: 'var(--tv-muted)', fontSize: metaSize }}>{volume.label}</span>
       )}
@@ -150,8 +151,24 @@ function PriceCell({
       >
         {formatPrice(volume.price, country.currencySymbol)}
       </span>
-      {layout.showTrends && <TrendMark trend={volume.trend} size={metaSize} />}
-      {layout.showPercent && <PercentBadge change={volume.change} size={metaSize} />}
+      {layout.showTrends && (
+        <span
+          className="inline-flex w-[1.15em] shrink-0 justify-center"
+          style={{ fontSize: metaSize }}
+          aria-hidden={volume.trend === 'neutral'}
+        >
+          <TrendMark trend={volume.trend} size="1em" />
+        </span>
+      )}
+      {layout.showPercent && (
+        <span
+          className="inline-flex min-w-[3.25em] shrink-0 justify-end"
+          style={{ fontSize: metaSize }}
+          aria-hidden={percentRounded === 0}
+        >
+          <PercentBadge change={volume.change} size="1em" />
+        </span>
+      )}
       {layout.showBeanPrices && volume.priceBeans != null && (
         <span
           className="font-semibold tabular-nums"
@@ -289,7 +306,7 @@ function ListRows({
           <div
             key={flashTrend ? `${drink.id}-${flashGen}` : drink.id}
             className={cn(
-              'flex items-center border-b last:border-0',
+              'flex items-start border-b last:border-0',
               flashTrend === 'up' && 'tv-dp-price-up',
               flashTrend === 'down' && 'tv-dp-price-down',
             )}
@@ -310,12 +327,12 @@ function ListRows({
               </div>
             )}
             <span
-              className="min-w-0 flex-1 truncate font-medium"
+              className="min-w-0 flex-1 break-words font-medium leading-snug"
               style={{ color: 'var(--tv-text)', fontSize: cm(1.82) }}
             >
               {drink.name}
             </span>
-            <span className="flex shrink-0 items-baseline" style={{ gap: cm(1.15) }}>
+            <span className="flex shrink-0 items-baseline self-center" style={{ gap: cm(1.15) }}>
               {volumes.map((v) => (
                 <PriceCell
                   key={v.value}
@@ -345,37 +362,54 @@ function VolumeTable({
   resolved,
   board,
   country,
+  title,
 }: {
   resolved: ResolvedSection;
   board: TvBoardConfig;
   country: Country;
+  title: string;
 }) {
   const { items } = resolved;
   const columns = sectionVolumeColumns(items);
   const priceSize = cm(2.02);
   const metaSize = cm(1.15);
   const nameSize = cm(1.82);
+  const titleSize = cm(2.3);
   const cellPad = cm(0.48);
+  const headerRule = '1px solid var(--tv-accent)';
+
+  const headerCellStyle: React.CSSProperties = {
+    borderBottom: headerRule,
+    paddingBottom: cellPad,
+  };
 
   return (
     <div
-      className="grid min-h-0 items-baseline"
+      className="grid min-h-0 items-start"
       style={{
         gridTemplateColumns: `minmax(0, 1fr) repeat(${columns.length}, minmax(0, max-content))`,
         columnGap: cm(1.54),
       }}
     >
-      {/* Шапка: подписи объёмов ровно над своими колонками */}
-      <span style={{ borderBottom: '1px solid var(--tv-accent)', paddingBottom: cellPad }} />
+      {/* Заголовок и объёмы — одна линия-«планка» на всю ширину таблицы */}
+      <span
+        className="min-w-0 break-words font-bold leading-tight"
+        style={{
+          ...headerCellStyle,
+          color: 'var(--tv-accent)',
+          fontSize: titleSize,
+        }}
+      >
+        {title}
+      </span>
       {columns.map((label) => (
         <span
           key={label}
           className="text-right font-bold uppercase tracking-wider"
           style={{
+            ...headerCellStyle,
             color: 'var(--tv-accent)',
             fontSize: metaSize,
-            borderBottom: '1px solid var(--tv-accent)',
-            paddingBottom: cellPad,
           }}
         >
           {label}
@@ -394,7 +428,7 @@ function VolumeTable({
         return (
           <Fragment key={drink.id}>
             <span
-              className="min-w-0 truncate font-medium"
+              className="min-w-0 break-words font-medium leading-snug"
               style={{ ...cellStyle, color: 'var(--tv-text)', fontSize: nameSize }}
             >
               {drink.name}
@@ -403,7 +437,7 @@ function VolumeTable({
             {columns.map((label) => {
               const v = byLabel.get(label);
               return (
-                <span key={label} className="text-right" style={cellStyle}>
+                <span key={label} className="flex justify-end text-right" style={cellStyle}>
                   {v ? (
                     <PriceCell
                       volume={v}
@@ -521,6 +555,8 @@ function SectionBlock({
 }) {
   const { section } = resolved;
   const isMedia = section.kind === 'media';
+  const isTableDrinks = section.kind === 'drinks' && section.display === 'table';
+  const sectionFontScale = section.fontScale ?? board.layout.fontScale;
 
   return (
     <div
@@ -531,9 +567,10 @@ function SectionBlock({
         background: isMedia ? 'transparent' : (section.background ?? 'var(--tv-surface)'),
         borderColor: section.showFrame ? 'var(--tv-border)' : 'transparent',
         padding: isMedia ? 0 : cm(1.06),
+        ['--tv-fs' as string]: String(sectionFontScale),
       }}
     >
-      {!isMedia && section.title.trim() && (
+      {!isMedia && section.title.trim() && !isTableDrinks && (
         <h2
           className="shrink-0 border-b font-bold"
           style={{
@@ -579,7 +616,12 @@ function SectionBlock({
           />
         )}
         {section.kind === 'drinks' && section.display === 'table' && (
-          <VolumeTable resolved={resolved} board={board} country={country} />
+          <VolumeTable
+            resolved={resolved}
+            board={board}
+            country={country}
+            title={section.title.trim()}
+          />
         )}
         {section.kind === 'chart' && (
           <ChartBlock resolved={resolved} board={board} country={country} />
