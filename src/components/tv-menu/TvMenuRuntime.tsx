@@ -17,7 +17,8 @@ const CONFIG_POLL_MS = 20_000;
 
 export default function TvMenuRuntime({ boardId }: { boardId?: string }) {
   const { country } = useCountry();
-  const { drinks, loading, error, secondsUntilNextPoll, flashMap, flashGen } = usePrices();
+  const { drinks, loading, error, secondsUntilNextPoll, pricesPollIntervalSec, flashMap, flashGen } =
+    usePrices();
 
   const [doc, setDoc] = useState<TvMenuDocument>(defaultTvMenuDocument);
   const [screenIndex, setScreenIndex] = useState(0);
@@ -86,6 +87,7 @@ export default function TvMenuRuntime({ boardId }: { boardId?: string }) {
         loading={loading}
         error={error}
         secondsUntilNextPoll={secondsUntilNextPoll}
+        pricesPollIntervalSec={pricesPollIntervalSec}
         flashMap={flashMap}
         flashGen={flashGen}
         screenCount={visibleScreens.length}

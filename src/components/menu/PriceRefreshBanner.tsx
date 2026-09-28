@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { RefreshCw } from "lucide-react";
-import { PRICES_POLL_INTERVAL_MS } from "@/contexts/PricesContext";
 import { cn } from "@/lib/utils";
 
 type Variant = "menu" | "tv";
@@ -20,12 +19,14 @@ export function PriceRefreshBanner({
   secondsUntilNextPoll,
   loading,
   variant,
+  pollIntervalSec = 30,
 }: {
   secondsUntilNextPoll: number | null;
   loading: boolean;
   variant: Variant;
+  pollIntervalSec?: number;
 }) {
-  const intervalSec = PRICES_POLL_INTERVAL_MS / 1000;
+  const intervalSec = Math.max(1, pollIntervalSec);
   const remainingPct =
     secondsUntilNextPoll != null
       ? Math.max(0, Math.min(100, (secondsUntilNextPoll / intervalSec) * 100))

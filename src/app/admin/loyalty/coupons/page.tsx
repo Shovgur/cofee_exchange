@@ -10,7 +10,9 @@ import {
   CheckCircle2,
   XCircle,
   ChevronRight,
+  Download,
 } from 'lucide-react';
+import { downloadAdminExport } from '@/lib/api/loyalty/exports';
 import {
   adminListCoupons,
   adminCancelCoupon,
@@ -114,6 +116,7 @@ export default function AdminCouponsPage() {
   const [cancelComment, setCancelComment] = useState('');
   const [cancelLoading, setCancelLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
@@ -205,10 +208,27 @@ export default function AdminCouponsPage() {
           <h1 className="text-2xl font-bold mb-1">Купоны</h1>
           <p className="text-sm text-muted">Поиск по номеру купона или QR-токену</p>
         </div>
-        <div className="flex shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5">
-          <Ticket size={16} className="text-orange" />
-          <span className="text-sm font-bold tabular-nums">{total === null ? '—' : total}</span>
-          <span className="text-xs text-muted">всего</span>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            variant="secondary"
+            disabled={exporting}
+            onClick={() => {
+              setExporting(true);
+              void downloadAdminExport('coupons', {
+                status: filter === 'all' ? undefined : filter,
+                search: search.trim() || undefined,
+              }).finally(() => setExporting(false));
+            }}
+            className="flex items-center gap-2"
+          >
+            <Download size={16} />
+            Выгрузить
+          </Button>
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5">
+            <Ticket size={16} className="text-orange" />
+            <span className="text-sm font-bold tabular-nums">{total === null ? '—' : total}</span>
+            <span className="text-xs text-muted">всего</span>
+          </div>
         </div>
       </div>
 

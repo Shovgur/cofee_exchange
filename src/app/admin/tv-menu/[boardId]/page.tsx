@@ -74,7 +74,13 @@ function nextFreeRect(sections: TvMenuSection[]): TvGridRect {
 export default function AdminTvMenuBoardPage({ params }: { params: { boardId: string } }) {
   const { boardId } = params;
   const router = useRouter();
-  const { drinks, loading: pricesLoading, error: pricesError, secondsUntilNextPoll } = usePrices();
+  const {
+    drinks,
+    loading: pricesLoading,
+    error: pricesError,
+    secondsUntilNextPoll,
+    pricesPollIntervalSec,
+  } = usePrices();
   const { country } = useCountry();
 
   const [doc, setDoc] = useState<TvMenuDocument | null>(null);
@@ -776,6 +782,7 @@ export default function AdminTvMenuBoardPage({ params }: { params: { boardId: st
                   loading={pricesLoading}
                   error={pricesError}
                   secondsUntilNextPoll={secondsUntilNextPoll}
+                  pricesPollIntervalSec={pricesPollIntervalSec}
                   screenCount={Math.max(1, board.screens.length)}
                   screenIndex={Math.max(0, board.screens.findIndex((s) => s.id === activeScreenId))}
                 />

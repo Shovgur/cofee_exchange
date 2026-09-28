@@ -12,13 +12,11 @@ import {
   Users,
   Award,
   ShieldAlert,
-  Coffee,
   Ticket,
   Monitor,
   MapPin,
   BarChart3,
   MessageSquare,
-  ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,10 +37,8 @@ const LOYALTY_NAV = [
   { href: '/admin/loyalty', icon: Users, label: 'Пользователи', exact: true },
   { href: '/admin/loyalty/coupons', icon: Ticket, label: 'Купоны', exact: false },
   { href: '/admin/loyalty/settings', icon: Award, label: 'Программа лояльности', exact: false },
-  { href: '/admin/loyalty/bean-prices', icon: Coffee, label: 'Цены в Бинах', exact: false },
   { href: '/admin/loyalty/alerts', icon: ShieldAlert, label: 'Алерты', exact: false },
   { href: '/admin/loyalty/support', icon: MessageSquare, label: 'Обратная связь', exact: false },
-  { href: '/admin/loyalty/menu', icon: ImageIcon, label: 'Контент меню', exact: false },
 ] as const;
 
 function accountNavLabel(name: string | undefined): string {

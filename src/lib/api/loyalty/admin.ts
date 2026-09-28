@@ -140,7 +140,7 @@ export interface BeanPriceOut {
   price_beans: number;
 }
 
-function buildQuery(params: Record<string, string | number | undefined | null>): string {
+function buildQuery(params: Record<string, string | number | boolean | undefined | null>): string {
   const q = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value == null || value === '') continue;
@@ -157,11 +157,15 @@ export async function adminSearchUsers(params: {
   query?: string;
   limit?: number;
   offset?: number;
+  is_blocked?: boolean;
+  country_code?: string;
 } = {}): Promise<AdminUserPage> {
   const qs = buildQuery({
     query: params.query?.trim(),
     limit: params.limit,
     offset: params.offset,
+    is_blocked: params.is_blocked,
+    country_code: params.country_code,
   });
   return loyaltyFetch<AdminUserPage>(`admin/users${qs}`, { auth: true });
 }

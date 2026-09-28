@@ -26,6 +26,7 @@ import {
 } from "@/lib/api/exchange/admin-drinks";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
+import DrinkLoyaltyExtras from "@/components/admin/drinks/DrinkLoyaltyExtras";
 
 // Helpers
 
@@ -253,6 +254,7 @@ export default function AdminDrinkDetailPage({ params }: PageProps) {
     try {
       const d = await putAdminDrinkProfile(drinkId, {
         name: profileForm.name.trim() || null,
+        sensitivity: profileForm.sensitivity.trim() ? profileForm.sensitivity : null,
         min_pct: profileForm.min_pct || null,
         max_pct: profileForm.max_pct || null,
         max_step_up_pct_override: profileForm.max_step_up_pct_override || null,
@@ -461,13 +463,13 @@ export default function AdminDrinkDetailPage({ params }: PageProps) {
           </Row>
           <Row
             label="Чувствительность"
-            hint="Пока отключено — используется «Чувствительность по умолчанию» в общих настройках"
+            hint="Пусто — берётся «Чувствительность по умолчанию» из общих настроек движка"
           >
             <Inp
               type="number"
               value={profileForm.sensitivity}
               onChange={(v) => patchProfile("sensitivity", v)}
-              disabled
+              disabled={profileSaving}
               placeholder="авто"
             />
           </Row>
@@ -530,6 +532,12 @@ export default function AdminDrinkDetailPage({ params }: PageProps) {
             <StatusBadge ok={profileStatus} />
           </div>
         </Section>
+
+        {drink && (
+          <Section title="Приложение: описание и цена в Бинах">
+            <DrinkLoyaltyExtras drink={drink} />
+          </Section>
+        )}
 
         {/* ── Базовая цена ── */}
         <Section title="Базовая цена">

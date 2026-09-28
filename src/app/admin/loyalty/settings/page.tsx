@@ -217,7 +217,7 @@ export default function AdminLoyaltySettingsPage() {
         <div className="rounded-2xl border border-border bg-surface p-6 space-y-5">
           <Field
             label="Бины за покупку (на ₽)"
-            hint="Сколько Бинов начисляется за каждый рубль в чеке"
+            hint="Кратно какой сумме начисляется 1 Бин"
             value={form.beans_accrual_rate}
             onChange={(v) => setForm((f) => ({ ...f, beans_accrual_rate: v }))}
           />

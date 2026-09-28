@@ -15,7 +15,9 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle2,
+  Download,
 } from 'lucide-react';
+import { downloadAdminExport } from '@/lib/api/loyalty/exports';
 import {
   adminSearchUsers,
   adminCreateUser,
@@ -194,9 +196,13 @@ function CreateUserModal({
   );
 }
 
+type BlockedFilter = 'all' | 'active' | 'blocked';
+
 export default function AdminLoyaltyPage() {
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const [blockedFilter, setBlockedFilter] = useState<BlockedFilter>('all');
+  const [exporting, setExporting] = useState(false);
   const [users, setUsers] = useState<AdminUserOut[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -208,12 +214,16 @@ export default function AdminLoyaltyPage() {
   // Отбрасываем ответы устаревших запросов, чтобы список не «прыгал» при быстром вводе.
   const requestId = useRef(0);
 
-  const load = useCallback(async (q: string) => {
+  const load = useCallback(async (q: string, blocked: BlockedFilter) => {
     const id = ++requestId.current;
     setLoading(true);
     setError(null);
     try {
-      const res = await adminSearchUsers({ query: q.trim() || undefined, limit: PAGE_SIZE });
+      const res = await adminSearchUsers({
+        query: q.trim() || undefined,
+        limit: PAGE_SIZE,
+        is_blocked: blocked === 'all' ? undefined : blocked === 'blocked',
+      });
       if (id !== requestId.current) return;
       setUsers(res.items);
       setTotal(res.total);
@@ -228,9 +238,9 @@ export default function AdminLoyaltyPage() {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => void load(query), query ? 350 : 0);
+    const t = setTimeout(() => void load(query, blockedFilter), query ? 350 : 0);
     return () => clearTimeout(t);
-  }, [query, load]);
+  }, [query, blockedFilter, load]);
 
   const loadMore = async () => {
     setLoadingMore(true);
@@ -239,6 +249,7 @@ export default function AdminLoyaltyPage() {
         query: query.trim() || undefined,
         limit: PAGE_SIZE,
         offset: users.length,
+        is_blocked: blockedFilter === 'all' ? undefined : blockedFilter === 'blocked',
       });
       setUsers((prev) => [...prev, ...res.items]);
       setTotal(res.total);
@@ -273,11 +284,50 @@ export default function AdminLoyaltyPage() {
             </span>
             <span className="text-xs text-muted">{query.trim() ? 'найдено' : 'всего'}</span>
           </div>
+          <Button
+            variant="secondary"
+            disabled={exporting}
+            onClick={() => {
+              setExporting(true);
+              void downloadAdminExport('users', {
+                query: query.trim() || undefined,
+                is_blocked: blockedFilter === 'all' ? undefined : blockedFilter === 'blocked',
+              }).finally(() => setExporting(false));
+            }}
+            className="flex items-center gap-2"
+          >
+            <Download size={16} />
+            Выгрузить
+          </Button>
           <Button onClick={() => setShowCreate(true)} className="flex items-center gap-2">
             <UserPlus size={16} />
             Добавить
           </Button>
         </div>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {(
+          [
+            { id: 'all' as const, label: 'Все' },
+            { id: 'active' as const, label: 'Активные' },
+            { id: 'blocked' as const, label: 'Заблокированные' },
+          ] as const
+        ).map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => setBlockedFilter(f.id)}
+            className={cn(
+              'rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors',
+              blockedFilter === f.id
+                ? 'border-orange bg-orange/10 text-orange'
+                : 'border-border text-muted hover:text-foreground',
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {/* Search */}

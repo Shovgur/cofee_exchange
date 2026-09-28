@@ -15,10 +15,12 @@ import {
   loyaltyMenuToPriceItems,
   type ApiMenuItem,
 } from "@/lib/api/loyalty";
+import {
+  PRICING_SETTINGS_SAVED_EVENT,
+  resolvePricesPollIntervalSec,
+} from "@/lib/api/exchange/poll-interval";
 import { useCountry } from "@/contexts/CountryContext";
 import type { Drink, PriceTrend } from "@/types";
-
-export const PRICES_POLL_INTERVAL_MS = 30_000;
 
 function msUntilNextPollBoundary(periodMs: number, minMs = 400): number {
   const now = Date.now();
@@ -36,6 +38,7 @@ interface PricesContextValue {
   flashMap: Map<string, PriceTrend>;
   flashGen: number;
   secondsUntilNextPoll: number | null;
+  pricesPollIntervalSec: number;
 }
 
 const PricesContext = createContext<PricesContextValue | null>(null);
@@ -57,7 +60,9 @@ export function PricesProvider({ children }: { children: ReactNode }) {
   const [flashMap, setFlashMap] = useState<Map<string, PriceTrend>>(new Map());
   const [flashGen, setFlashGen] = useState(0);
   const [secondsUntilNextPoll, setSecondsUntilNextPoll] = useState<number | null>(null);
+  const [pricesPollIntervalSec, setPricesPollIntervalSec] = useState(30);
 
+  const pollIntervalMsRef = useRef(30_000);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSuccessfulPollAtRef = useRef<number | null>(null);
@@ -66,12 +71,24 @@ export function PricesProvider({ children }: { children: ReactNode }) {
   const doFetchRef = useRef<(silent?: boolean) => void>(() => {});
   const mountedRef = useRef(false);
 
+  const applyPollIntervalSec = useCallback((sec: number) => {
+    const ms = sec * 1000;
+    pollIntervalMsRef.current = ms;
+    setPricesPollIntervalSec(sec);
+  }, []);
+
+  const refreshPollInterval = useCallback(async () => {
+    const sec = await resolvePricesPollIntervalSec();
+    applyPollIntervalSec(sec);
+  }, [applyPollIntervalSec]);
+
   const scheduleNextAutoPoll = useCallback(() => {
     if (pollTimeoutRef.current != null) {
       clearTimeout(pollTimeoutRef.current);
       pollTimeoutRef.current = null;
     }
-    const delay = msUntilNextPollBoundary(PRICES_POLL_INTERVAL_MS);
+    const periodMs = pollIntervalMsRef.current;
+    const delay = msUntilNextPollBoundary(periodMs);
     const at = Date.now() + delay;
     nextScheduledPollAtRef.current = at;
     setSecondsUntilNextPoll(Math.max(0, Math.ceil((at - Date.now()) / 1000)));
@@ -149,7 +166,7 @@ export function PricesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     mountedRef.current = true;
-    doFetch(false);
+    void refreshPollInterval().then(() => doFetch(false));
     return () => {
       mountedRef.current = false;
       pollGenerationRef.current += 1;
@@ -159,7 +176,17 @@ export function PricesProvider({ children }: { children: ReactNode }) {
         pollTimeoutRef.current = null;
       }
     };
-  }, [doFetch]);
+  }, [doFetch, refreshPollInterval]);
+
+  useEffect(() => {
+    const onSettingsSaved = () => {
+      void refreshPollInterval().then(() => {
+        scheduleNextAutoPoll();
+      });
+    };
+    window.addEventListener(PRICING_SETTINGS_SAVED_EVENT, onSettingsSaved);
+    return () => window.removeEventListener(PRICING_SETTINGS_SAVED_EVENT, onSettingsSaved);
+  }, [refreshPollInterval, scheduleNextAutoPoll]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -171,7 +198,10 @@ export function PricesProvider({ children }: { children: ReactNode }) {
       const base = lastSuccessfulPollAtRef.current;
       if (base === null) return;
       setSecondsUntilNextPoll(
-        Math.max(0, Math.ceil((base + PRICES_POLL_INTERVAL_MS - Date.now()) / 1000)),
+        Math.max(
+          0,
+          Math.ceil((base + pollIntervalMsRef.current - Date.now()) / 1000),
+        ),
       );
     }, 500);
     return () => clearInterval(id);
@@ -188,6 +218,7 @@ export function PricesProvider({ children }: { children: ReactNode }) {
         flashMap,
         flashGen,
         secondsUntilNextPoll,
+        pricesPollIntervalSec,
       }}
     >
       {children}

@@ -12,6 +12,7 @@ import {
   ChevronUp,
   ScrollText,
 } from "lucide-react";
+import { persistPricingPollIntervalSec } from "@/lib/api/exchange/poll-interval";
 import {
   fetchAdminSettings,
   fetchAdminSettingsHistory,
@@ -267,6 +268,7 @@ export default function AdminPage() {
     try {
       const updated = await putAdminSettings(formToPayload(form));
       setForm(settingsToForm(updated));
+      persistPricingPollIntervalSec(updated.price_update_interval_sec);
       setSaveStatus("ok");
       const [h] = await Promise.all([fetchAdminSettingsHistory()]);
       setHistory(h);
@@ -351,7 +353,7 @@ export default function AdminPage() {
 
               <FieldRow
                 label="Интервал обновления цен, сек"
-                hint="Как часто на сервере пересчитываются и обновляются цены"
+                hint="Как часто на сервере пересчитываются цены. После сохранения таймер в меню и на ТВ подстраивается под это значение."
               >
                 <NumInput
                   value={form.price_update_interval_sec}

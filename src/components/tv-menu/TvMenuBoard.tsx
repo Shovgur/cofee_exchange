@@ -640,6 +640,7 @@ export interface TvMenuBoardProps {
   loading?: boolean;
   error?: string | null;
   secondsUntilNextPoll?: number | null;
+  pricesPollIntervalSec?: number;
   flashMap?: Map<string, PriceTrend>;
   flashGen?: number;
   screenCount?: number;
@@ -656,6 +657,7 @@ export default function TvMenuBoard({
   loading = false,
   error = null,
   secondsUntilNextPoll = null,
+  pricesPollIntervalSec = 30,
   flashMap = EMPTY_FLASH,
   flashGen = 0,
   screenCount = 1,
@@ -801,6 +803,7 @@ export default function TvMenuBoard({
               variant="tv"
               loading={loading}
               secondsUntilNextPoll={secondsUntilNextPoll}
+              pollIntervalSec={pricesPollIntervalSec}
             />
           )}
         </header>
