@@ -4,63 +4,61 @@ import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Save, Upload } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { adminGetItemBeanPrice, adminSetItemBeanPrice } from '@/lib/api/loyalty/admin';
-import { adminListMenuItems, adminPatchMenuItem } from '@/lib/api/loyalty/menu-admin';
+import { adminPatchMenuItem } from '@/lib/api/loyalty/menu-admin';
+import { fetchMenu } from '@/lib/api/loyalty/catalog';
 import { loyaltyUploadMedia } from '@/lib/api/loyalty/client';
 import type { ApiMenuItem } from '@/lib/api/loyalty/types';
 import { useCountry } from '@/contexts/CountryContext';
 import type { AdminDrinkRead } from '@/lib/api/exchange/admin-drinks';
+import { matchLoyaltyMenuItem } from '@/lib/admin/match-loyalty-menu-item';
 import CoffeeBeanIcon from '@/components/ui/CoffeeBeanIcon';
-
-function matchMenuItem(drink: AdminDrinkRead, items: ApiMenuItem[]): ApiMenuItem | null {
-  const pos = drink.pos_item_id?.trim();
-  if (!pos) return null;
-  const cap = drink.unitCapacity;
-  const byPos = items.filter((i) => i.pos_item_id === pos);
-  if (byPos.length === 0) return null;
-  if (cap == null) return byPos[0];
-  const bySize = byPos.find((i) => {
-    const m = i.size_name.match(/[\d.,]+/);
-    if (!m) return false;
-    const vol = parseFloat(m[0].replace(',', '.'));
-    return Number.isFinite(vol) && Math.abs(vol - cap) < 0.021;
-  });
-  return bySize ?? byPos[0];
-}
 
 export default function DrinkLoyaltyExtras({ drink }: { drink: AdminDrinkRead }) {
   const { country } = useCountry();
+  const [menuItems, setMenuItems] = useState<ApiMenuItem[]>([]);
   const [menuItem, setMenuItem] = useState<ApiMenuItem | null>(null);
+  const [manualId, setManualId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [beanPrice, setBeanPrice] = useState('');
   const [status, setStatus] = useState<'idle' | 'ok' | 'err'>('idle');
 
+  const applyMenuItem = useCallback(async (found: ApiMenuItem | null) => {
+    setMenuItem(found);
+    if (!found) {
+      setBeanPrice('');
+      return;
+    }
+    try {
+      const bp = await adminGetItemBeanPrice(found.id);
+      setBeanPrice(String(bp.price_beans));
+    } catch {
+      setBeanPrice(found.price_beans != null ? String(found.price_beans) : '');
+    }
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const page = await adminListMenuItems({
-        country: country.id,
-        limit: 500,
-        include_inactive: true,
-      });
-      const found = matchMenuItem(drink, page.items);
-      setMenuItem(found);
-      if (found) {
-        try {
-          const bp = await adminGetItemBeanPrice(found.id);
-          setBeanPrice(String(bp.price_beans));
-        } catch {
-          setBeanPrice(found.price_beans != null ? String(found.price_beans) : '');
-        }
-      }
+      const items = await fetchMenu(country.id);
+      setMenuItems(items);
+      const found = matchLoyaltyMenuItem(drink, items);
+      await applyMenuItem(found);
+      setManualId(found?.id ?? '');
     } finally {
       setLoading(false);
     }
-  }, [country.id, drink]);
+  }, [country.id, drink, applyMenuItem]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!manualId) return;
+    const picked = menuItems.find((i) => i.id === manualId);
+    if (picked) void applyMenuItem(picked);
+  }, [manualId, menuItems, applyMenuItem]);
 
   const save = async () => {
     if (!menuItem) return;
@@ -99,19 +97,56 @@ export default function DrinkLoyaltyExtras({ drink }: { drink: AdminDrinkRead })
 
   if (!menuItem) {
     return (
-      <p className="py-4 text-sm text-muted">
-        Позиция в меню лояльности не найдена (нужен совпадающий{' '}
-        <code className="text-xs">pos_item_id</code> и объём). Контент и цена в Бинах
-        настраиваются в разделе «Контент меню» / «Цены в Бинах».
-      </p>
+      <div className="space-y-3 py-2 text-sm text-muted">
+        <p>
+          Автоматически не нашли позицию в меню приложения для «{drink.name}»
+          {drink.unitCapacity != null ? ` (${drink.unitCapacity} л)` : ''}. Выберите вручную —
+          тот же список, что на странице «Цены в Бинах».
+        </p>
+        {drink.pos_item_id ? (
+          <p className="text-xs">
+            pos_item_id в движке: <code className="text-foreground">{drink.pos_item_id}</code>
+          </p>
+        ) : (
+          <p className="text-xs text-amber-800">
+            У напитка в движке цен не заполнен pos_item_id — связь с меню только по названию и
+            объёму или вручную.
+          </p>
+        )}
+        <select
+          value={manualId}
+          onChange={(e) => setManualId(e.target.value)}
+          className="w-full rounded-xl border border-border bg-surface-el px-3 py-2.5 text-sm text-foreground"
+        >
+          <option value="">— Выберите позицию меню —</option>
+          {menuItems.map((i) => (
+            <option key={i.id} value={i.id}>
+              {i.name} · {i.size_name} ({i.price_beans ?? '—'} Б)
+            </option>
+          ))}
+        </select>
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted">
-        Меню приложения: {menuItem.name} · {menuItem.size_name}
-      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-xs text-muted">
+          Меню приложения: {menuItem.name} · {menuItem.size_name}
+        </p>
+        <select
+          value={menuItem.id}
+          onChange={(e) => setManualId(e.target.value)}
+          className="rounded-lg border border-border bg-surface-el px-2 py-1 text-xs"
+        >
+          {menuItems.map((i) => (
+            <option key={i.id} value={i.id}>
+              {i.name} · {i.size_name}
+            </option>
+          ))}
+        </select>
+      </div>
       <textarea
         value={menuItem.description ?? ''}
         onChange={(e) => setMenuItem({ ...menuItem, description: e.target.value })}
