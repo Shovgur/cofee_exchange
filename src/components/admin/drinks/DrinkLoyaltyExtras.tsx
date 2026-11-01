@@ -12,6 +12,7 @@ import { useCountry } from '@/contexts/CountryContext';
 import type { AdminDrinkRead } from '@/lib/api/exchange/admin-drinks';
 import { matchLoyaltyMenuItem } from '@/lib/admin/match-loyalty-menu-item';
 import CoffeeBeanIcon from '@/components/ui/CoffeeBeanIcon';
+import DrinkModifierBeanPrices from '@/components/admin/drinks/DrinkModifierBeanPrices';
 
 export default function DrinkLoyaltyExtras({ drink }: { drink: AdminDrinkRead }) {
   const { country } = useCountry();
@@ -214,6 +215,7 @@ export default function DrinkLoyaltyExtras({ drink }: { drink: AdminDrinkRead })
         {status === 'ok' && <span className="text-sm text-success">Сохранено</span>}
         {status === 'err' && <span className="text-sm text-danger">Ошибка</span>}
       </div>
+      <DrinkModifierBeanPrices menuItemId={menuItem.id} />
     </div>
   );
 }
